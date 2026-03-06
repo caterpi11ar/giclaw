@@ -39,7 +39,10 @@ export class TaskRunner extends EventEmitter {
 
     logger.info(`Starting task run: ${enabled.length} task(s) enabled`);
 
-    for (const task of enabled) {
+    for (let i = 0; i < enabled.length; i++) {
+      const task = enabled[i]!;
+      this.emit("task:index", { taskIndex: i + 1, taskTotal: enabled.length, taskId: task.id });
+      logger.info(`[${task.id}] Starting (Task ${i + 1}/${enabled.length}): ${task.name}`);
       const result = await this.runSingle(task, { ...ctx, logger });
       results.push(result);
     }
@@ -59,7 +62,6 @@ export class TaskRunner extends EventEmitter {
     task: TaskDefinition,
     ctx: TaskContext,
   ): Promise<TaskResult> {
-    logger.info(`[${task.id}] Starting: ${task.name}`);
     this.emit("task:start", { taskId: task.id, name: task.name });
 
     const start = Date.now();

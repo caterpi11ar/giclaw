@@ -1,7 +1,8 @@
-import { readFile } from "node:fs/promises";
+import { readFile, access } from "node:fs/promises";
 import { resolve } from "node:path";
 import dotenv from "dotenv";
 import { appConfigSchema, type AppConfig } from "./schema.js";
+import { PATHS } from "./paths.js";
 import { ConfigError } from "../utils/errors.js";
 
 /**
@@ -47,6 +48,15 @@ async function loadJsonFile(path: string): Promise<Record<string, unknown>> {
   }
 }
 
+async function fileExists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Map environment variables to config overrides.
  */
@@ -83,18 +93,53 @@ export interface LoadConfigOptions {
   cliOverrides?: Record<string, unknown>;
 }
 
+// --- Config snapshot cache ---
+
+let _snapshot: AppConfig | null = null;
+
+/**
+ * Return the cached config snapshot.
+ * Throws if loadConfig() has not been called yet.
+ */
+export function getConfig(): AppConfig {
+  if (!_snapshot) {
+    throw new ConfigError("Config not loaded. Call loadConfig() first.");
+  }
+  return _snapshot;
+}
+
+/**
+ * Resolve which config.json file to use.
+ *
+ * Priority:
+ * 1. Explicit CLI --config path (if provided)
+ * 2. CWD ./config.json (if it exists — backward compat)
+ * 3. ~/.giclaw/config.json (global default)
+ */
+async function resolveConfigPath(explicit?: string): Promise<string> {
+  if (explicit !== undefined) {
+    return explicit;
+  }
+  if (await fileExists(resolve("./config.json"))) {
+    return "./config.json";
+  }
+  return PATHS.configPath;
+}
+
 /**
  * Load config with priority: config.json < env vars < CLI args.
- * Loads .env file automatically.
+ * Loads .env files from CWD and ~/.giclaw/ with CWD taking precedence.
  */
 export async function loadConfig(options: LoadConfigOptions = {}): Promise<AppConfig> {
-  // Load .env
+  // Load .env — CWD first (dotenv won't overwrite existing vars)
   dotenv.config();
+  dotenv.config({ path: PATHS.envPath });
 
-  const { configPath = "./config.json", cliOverrides = {} } = options;
+  const { configPath, cliOverrides = {} } = options;
+  const resolvedPath = await resolveConfigPath(configPath);
 
   // Layer 1: JSON file
-  const fileConfig = await loadJsonFile(configPath);
+  const fileConfig = await loadJsonFile(resolvedPath);
 
   // Layer 2: env vars
   const envConfig = envOverrides();
@@ -110,5 +155,6 @@ export async function loadConfig(options: LoadConfigOptions = {}): Promise<AppCo
     );
   }
 
-  return result.data;
+  _snapshot = result.data;
+  return _snapshot;
 }

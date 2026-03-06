@@ -1,7 +1,9 @@
 import type { FastifyInstance } from "fastify";
+import type { Gateway } from "../gateway/gateway.js";
 import { logger, type LogEntry } from "../utils/logger.js";
+import type { ProgressEvent } from "../utils/progress.js";
 
-export function registerWebSocket(app: FastifyInstance): void {
+export function registerWebSocket(app: FastifyInstance, gateway: Gateway): void {
   // Circular buffer for recent logs
   const LOG_BUFFER_SIZE = 500;
   const logBuffer: LogEntry[] = [];
@@ -15,6 +17,13 @@ export function registerWebSocket(app: FastifyInstance): void {
 
   app.register(async (fastify) => {
     fastify.get("/ws", { websocket: true }, (socket) => {
+      // Send current snapshot on connect
+      try {
+        socket.send(JSON.stringify({ type: "snapshot", data: gateway.getSnapshot() }));
+      } catch {
+        // Client disconnected
+      }
+
       // Send recent logs on connect
       for (const entry of logBuffer) {
         socket.send(JSON.stringify({ type: "log", data: entry }));
@@ -29,7 +38,17 @@ export function registerWebSocket(app: FastifyInstance): void {
         }
       };
 
+      // Forward progress events
+      const onProgress = (event: ProgressEvent) => {
+        try {
+          socket.send(JSON.stringify({ type: "progress", data: event }));
+        } catch {
+          // Client disconnected
+        }
+      };
+
       logger.on("log", onLog);
+      logger.on("progress", onProgress);
 
       // Heartbeat
       const heartbeat = setInterval(() => {
@@ -42,6 +61,7 @@ export function registerWebSocket(app: FastifyInstance): void {
 
       socket.on("close", () => {
         logger.removeListener("log", onLog);
+        logger.removeListener("progress", onProgress);
         clearInterval(heartbeat);
       });
     });

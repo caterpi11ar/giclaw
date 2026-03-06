@@ -1,9 +1,7 @@
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir, rename } from "node:fs/promises";
+import { join } from "node:path";
 import type { PersistedState, RunSummary } from "./types.js";
 import { logger } from "../utils/logger.js";
-
-const STATE_FILE = "./data/state.json";
-const MAX_HISTORY = 100;
 
 function defaultState(): PersistedState {
   return {
@@ -17,11 +15,20 @@ function defaultState(): PersistedState {
 
 export class StateStore {
   private state: PersistedState | null = null;
+  private readonly stateFile: string;
+  private readonly dataDir: string;
+  private readonly maxHistory: number;
+
+  constructor(dataDir: string, maxHistory: number = 100) {
+    this.dataDir = dataDir;
+    this.stateFile = join(dataDir, "state.json");
+    this.maxHistory = maxHistory;
+  }
 
   async load(): Promise<PersistedState> {
     if (this.state) return this.state;
     try {
-      const raw = await readFile(STATE_FILE, "utf-8");
+      const raw = await readFile(this.stateFile, "utf-8");
       this.state = JSON.parse(raw) as PersistedState;
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") {
@@ -36,8 +43,12 @@ export class StateStore {
 
   async save(): Promise<void> {
     if (!this.state) return;
-    await mkdir("./data", { recursive: true });
-    await writeFile(STATE_FILE, JSON.stringify(this.state, null, 2), "utf-8");
+    await mkdir(this.dataDir, { recursive: true });
+    const tmp = this.stateFile + ".tmp";
+    await writeFile(tmp, JSON.stringify(this.state, null, 2), "utf-8");
+    // .bak backup of previous state
+    try { await rename(this.stateFile, this.stateFile + ".bak"); } catch {}
+    await rename(tmp, this.stateFile);
   }
 
   async updateAfterRun(summary: RunSummary): Promise<void> {
@@ -47,8 +58,8 @@ export class StateStore {
     state.lastSuccess = summary.results.every((r) => r.success);
     state.totalRuns++;
     state.history.push(summary);
-    if (state.history.length > MAX_HISTORY) {
-      state.history = state.history.slice(-MAX_HISTORY);
+    if (state.history.length > this.maxHistory) {
+      state.history = state.history.slice(-this.maxHistory);
     }
     await this.save();
   }

@@ -11,6 +11,7 @@ export interface TaskContext {
   logger: typeof logger;
   transcript?: TranscriptWriter;
   screenshotDir?: string;
+  onProgress?: (step: number, elapsed: number, action: string, reason: string) => void;
 }
 
 export interface TaskDefinition {

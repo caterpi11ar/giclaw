@@ -36,6 +36,7 @@ export async function runAgentLoop(ctx: AgentContext): Promise<AgentResult> {
     step++;
 
     logger.info(`Step ${step}: ${plan.action} — ${plan.reason}`);
+    ctx.onProgress?.(step, Date.now() - start, plan.action, plan.reason);
 
     // Track recent actions (sliding window)
     recentActions.push({

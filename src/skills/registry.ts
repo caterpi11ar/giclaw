@@ -2,6 +2,7 @@ import type { TaskDefinition, TaskResult, TaskContext } from "../tasks/base-task
 import { runAgentLoop } from "../agent/agent-loop.js";
 import type { SkillDefinition } from "./types.js";
 import { loadSkills } from "./loader.js";
+import { PATHS } from "../config/paths.js";
 
 export class SkillRegistry {
   private skills: SkillDefinition[] = [];
@@ -38,7 +39,8 @@ export class SkillRegistry {
             goal: skill.taskDescription,
             timeoutMs: skill.timeoutMs,
             transcript,
-            screenshotDir: screenshotDir ?? "./tmp",
+            screenshotDir: screenshotDir ?? PATHS.screenshotDir,
+            onProgress: ctx.onProgress,
           });
 
           return {

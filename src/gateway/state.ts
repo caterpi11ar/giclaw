@@ -13,6 +13,13 @@ export class GatewayState extends EventEmitter {
     queueDepth: 0,
     lastRunAt: null,
     lastSuccess: null,
+    phase: "idle",
+    taskIndex: 0,
+    taskTotal: 0,
+    currentStep: 0,
+    elapsed: 0,
+    currentAction: null,
+    currentReason: null,
   };
 
   getSnapshot(): GatewaySnapshot {

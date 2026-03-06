@@ -21,7 +21,7 @@ export async function startWebServer(gateway: Gateway): Promise<void> {
   });
 
   registerApi(app, gateway);
-  registerWebSocket(app);
+  registerWebSocket(app, gateway);
 
   const port = gateway.config.web.port;
   await app.listen({ port, host: "0.0.0.0" });

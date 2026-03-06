@@ -58,6 +58,29 @@ export function Dashboard({ gateway }: DashboardProps) {
     };
   }, []);
 
+  // Track pipeline start time for live elapsed calculation
+  const [pipelineStartedAt, setPipelineStartedAt] = useState<number | null>(null);
+  const [liveElapsed, setLiveElapsed] = useState(0);
+
+  useEffect(() => {
+    if (snapshot.running && !pipelineStartedAt) {
+      setPipelineStartedAt(Date.now() - snapshot.elapsed);
+    } else if (!snapshot.running) {
+      setPipelineStartedAt(null);
+    }
+  }, [snapshot.running, snapshot.elapsed, pipelineStartedAt]);
+
+  // Tick elapsed timer every second while running
+  useEffect(() => {
+    if (!snapshot.running || !pipelineStartedAt) {
+      setLiveElapsed(snapshot.elapsed);
+      return;
+    }
+    setLiveElapsed(Date.now() - pipelineStartedAt);
+    const timer = setInterval(() => setLiveElapsed(Date.now() - pipelineStartedAt), 1000);
+    return () => clearInterval(timer);
+  }, [snapshot.running, pipelineStartedAt, snapshot.elapsed]);
+
   const handleRunNow = useCallback(() => {
     if (!snapshot.running) {
       gateway.enqueueRun("manual").catch(() => {});
@@ -98,8 +121,14 @@ export function Dashboard({ gateway }: DashboardProps) {
       </Box>
 
       <StatusBar
-        running={snapshot.running}
+        phase={snapshot.phase}
         currentTask={snapshot.currentTask}
+        taskIndex={snapshot.taskIndex}
+        taskTotal={snapshot.taskTotal}
+        currentStep={snapshot.currentStep}
+        elapsed={liveElapsed}
+        currentAction={snapshot.currentAction}
+        currentReason={snapshot.currentReason}
       />
       <TaskResults lastResult={lastResult} />
       <LogPanel logs={logs} />

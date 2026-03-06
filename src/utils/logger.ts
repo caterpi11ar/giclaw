@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events";
+import type { ProgressEvent } from "./progress.js";
 
 type LogLevel = "debug" | "info" | "warn" | "error";
 
@@ -96,6 +97,10 @@ class Logger extends EventEmitter {
 
   error(message: string, ...args: unknown[]): void {
     this.log("error", message, ...args);
+  }
+
+  emitProgress(event: ProgressEvent): void {
+    this.emit("progress", event);
   }
 }
 

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PATHS } from "./paths.js";
 
 export const appConfigSchema = z.object({
   browser: z
@@ -14,7 +15,7 @@ export const appConfigSchema = z.object({
           height: z.number().default(720),
         })
         .default({}),
-      cookieFilePath: z.string().default("./cookies.json"),
+      cookieFilePath: z.string().default(PATHS.cookiePath),
       dialogAutoDismissMs: z.number().default(10_000),
     })
     .default({}),
@@ -51,7 +52,7 @@ export const appConfigSchema = z.object({
         "expedition-collect",
         "battle-pass-claim",
       ]),
-      skillsDirs: z.array(z.string()).default(["./skills"]),
+      skillsDirs: z.array(z.string()).default(["./skills", PATHS.skillsDir]),
     })
     .default({}),
 
@@ -71,7 +72,7 @@ export const appConfigSchema = z.object({
 
   memory: z
     .object({
-      dataDir: z.string().default("./data"),
+      dataDir: z.string().default(PATHS.dataDir),
       maxHistory: z.number().default(100),
     })
     .default({}),
