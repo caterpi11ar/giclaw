@@ -3,10 +3,10 @@
  * Pure functions — no side effects, no dependencies.
  */
 
-import type { Locale, RecentAction, TaskDescription } from "./types.js";
+import type { Locale, RecentAction, TaskDescription } from './types.js'
 
-type L = Record<Locale, string>;
-const t = (texts: L, locale: Locale): string => texts[locale];
+type L = Record<Locale, string>
+const t = (texts: L, locale: Locale): string => texts[locale]
 
 export function findCoordinatesPrompt(goal: string, locale: Locale): string {
   return [
@@ -31,14 +31,14 @@ export function findCoordinatesPrompt(goal: string, locale: Locale): string {
       zh: `只返回 JSON，不要任何其他文字或 markdown。`,
       en: `Return only JSON, no other text or markdown.`,
     }, locale),
-  ].join("");
+  ].join('')
 }
 
 export function checkConditionPrompt(condition: string, locale: Locale): string {
   return t({
     zh: `查看这张截图，判断以下条件是否成立："${condition}"。只回答 true 或 false，不要其他文字。`,
     en: `Look at this screenshot and determine whether the following condition is met: "${condition}". Answer only true or false, no other text.`,
-  }, locale);
+  }, locale)
 }
 
 /**
@@ -51,11 +51,18 @@ function gameContext(locale: Locale): string {
 - **主界面（游戏世界画面）**：鼠标被锁定用于控制视角，**不能点击任何 HUD 元素**。只能通过**键盘按键**（如 Esc）进行交互。
 - **菜单/弹窗界面**（派蒙菜单、邮箱、纪行等）：鼠标解锁，**可以正常点击**按钮和图标。
 
-【云游戏平台侧边栏——禁止点击！】
-屏幕最左侧边缘有一列**云游戏平台自带的图标**（头像、HD、WiFi信号、音量、手柄、下载、刷新、剪贴板、退出等），这些**不是游戏内的 UI**。
-- **绝对不要点击这些图标**，它们会弹出云游戏助手/设置浮层，遮挡游戏界面。
-- 如果误点导致弹出浮层，点击浮层外的游戏区域或按 Escape 关闭。
-- 派蒙菜单的内容在这列图标的**右侧**，注意区分。
+【屏幕左侧两列图标的区分——极其重要！】
+屏幕左侧存在**两列不同的图标**，从左到右依次为：
+
+第一列：**云游戏平台侧边栏**（x ≈ 0-25，紧贴屏幕最左边缘）
+- 这些**不是游戏 UI**，**绝对不要点击**！点击会弹出浮层遮挡游戏。
+- 如果误点弹出浮层，按 Escape 或点击浮层外区域关闭。
+
+第二列：**派蒙菜单左侧图标栏**（x ≈ 35-65，在云游戏侧边栏的右侧）
+- 仅在**派蒙菜单打开时**可见，是游戏内菜单的一部分。
+- 包含 4-5 个小方形图标，纵向排列，间距较小。
+- 从上到下依次为：角色头像（圆形）、好友（双人形）、**邮件（信封形）**、反馈（感叹号形）。
+- **识别邮件图标的方法**：找到信封/书信形状的图标，它上方是圆形头像和双人图标，有新邮件时右上角有红色小圆点。
 
 【主界面 HUD 布局】（仅供识别画面状态，不可点击）
 - 左上角：派蒙头像图标（白色Q版角色头像）。
@@ -71,11 +78,18 @@ function gameContext(locale: Locale): string {
 - **Main world screen**: Mouse is locked for camera control. **Cannot click any HUD elements**. Use **keyboard keys** (e.g., Esc) to interact.
 - **Menu/popup screens** (Paimon menu, mailbox, battle pass, etc.): Mouse is unlocked. **Can click** buttons and icons normally.
 
-[Cloud Gaming Platform Sidebar — DO NOT CLICK!]
-The far-left edge of the screen has a column of **cloud gaming platform icons** (avatar, HD, WiFi signal, volume, gamepad, download, refresh, clipboard, exit). These are **NOT part of the game UI**.
-- **Never click these icons** — they open a cloud gaming assistant/settings overlay that blocks the game interface.
-- If accidentally clicked and an overlay appears, click outside the overlay on the game area or press Escape to close it.
-- The Paimon menu content is to the **right** of this sidebar column.
+[Two Icon Columns on the Left Side — CRITICAL DISTINCTION!]
+There are **two separate columns of icons** on the left side of the screen, from left to right:
+
+Column 1: **Cloud Gaming Platform Sidebar** (x ≈ 0-25, flush with the left screen edge)
+- These are **NOT game UI**. **NEVER click them!** Clicking opens an overlay that blocks the game.
+- If accidentally clicked, press Escape or click outside the overlay to close it.
+
+Column 2: **Paimon Menu Left Icon Bar** (x ≈ 35-65, to the right of the cloud sidebar)
+- Only visible when the **Paimon menu is open**; it is part of the in-game menu.
+- Contains 4-5 small square icons arranged vertically with small spacing.
+- From top to bottom: character avatar (circular), friends (two-person shape), **mail (envelope shape)**, feedback (exclamation mark shape).
+- **How to identify the mail icon**: Look for the envelope/letter-shaped icon. Above it are the circular avatar and two-person icons. When there is new mail, a red dot appears at its top-right corner.
 
 [Main Screen HUD Layout] (for visual identification only, not clickable)
 - Top-left: Paimon avatar icon (white chibi character).
@@ -87,7 +101,7 @@ The far-left edge of the screen has a column of **cloud gaming platform icons** 
 - Bottom right: E (Elemental Skill) and Q (Elemental Burst) buttons.
 
 `,
-  }, locale);
+  }, locale)
 }
 
 export function planNextActionPrompt(
@@ -95,42 +109,43 @@ export function planNextActionPrompt(
   recentActions: RecentAction[] | undefined,
   locale: Locale,
 ): string {
-  const parts: string[] = [];
+  const parts: string[] = []
 
   // Goal section: structured or plain string
-  if (typeof goal === "string") {
+  if (typeof goal === 'string') {
     parts.push(t({
       zh: `你正在帮我完成以下任务：${goal}\n\n`,
       en: `You are helping me complete the following task: ${goal}\n\n`,
-    }, locale));
+    }, locale))
     parts.push(t({
       zh: `请分析这张截图，判断当前状态，并决定下一步操作。\n\n`,
       en: `Please analyze this screenshot, assess the current state, and decide the next action.\n\n`,
-    }, locale));
-  } else {
-    parts.push(gameContext(locale));
+    }, locale))
+  }
+  else {
+    parts.push(gameContext(locale))
     parts.push(t({
       zh: `【任务背景】\n${goal.background}\n\n`,
       en: `[Task Background]\n${goal.background}\n\n`,
-    }, locale));
+    }, locale))
     parts.push(t({
       zh: `【任务目标】\n${goal.goal}\n\n`,
       en: `[Task Goal]\n${goal.goal}\n\n`,
-    }, locale));
+    }, locale))
     parts.push(t({
       zh: `请分析截图，判断当前状态，决定下一步。\n\n`,
       en: `Please analyze the screenshot, assess the current state, and decide the next step.\n\n`,
-    }, locale));
+    }, locale))
 
     if (goal.knownIssues.length > 0) {
       parts.push(t({
         zh: `【已知问题及处理方法】\n`,
         en: `[Known Issues and Solutions]\n`,
-      }, locale));
+      }, locale))
       goal.knownIssues.forEach((issue, i) => {
-        parts.push(`  ${i + 1}. ${issue}\n`);
-      });
-      parts.push(`\n`);
+        parts.push(`  ${i + 1}. ${issue}\n`)
+      })
+      parts.push(`\n`)
     }
   }
 
@@ -183,42 +198,44 @@ export function planNextActionPrompt(
       zh: `5. 绝对不要反复点击弹窗内容区域的中心——那里通常没有可交互元素\n\n`,
       en: `5. Never repeatedly click the center of the popup content area — there are usually no interactive elements there\n\n`,
     }, locale),
-  );
+  )
 
   // Recent action history
   if (recentActions && recentActions.length > 0) {
     parts.push(t({
       zh: `【最近操作记录】（最近 ${recentActions.length} 步）\n`,
       en: `[Recent Actions] (last ${recentActions.length} steps)\n`,
-    }, locale));
+    }, locale))
     for (const a of recentActions) {
-      if (a.action === "click") {
+      if (a.action === 'click') {
         parts.push(t({
           zh: `  步骤${a.step}: click (${a.x}, ${a.y}) — ${a.reason}\n`,
           en: `  Step ${a.step}: click (${a.x}, ${a.y}) — ${a.reason}\n`,
-        }, locale));
-      } else if (a.action === "press-key") {
+        }, locale))
+      }
+      else if (a.action === 'press-key') {
         parts.push(t({
           zh: `  步骤${a.step}: press-key "${a.key}" — ${a.reason}\n`,
           en: `  Step ${a.step}: press-key "${a.key}" — ${a.reason}\n`,
-        }, locale));
-      } else {
+        }, locale))
+      }
+      else {
         parts.push(t({
           zh: `  步骤${a.step}: ${a.action} — ${a.reason}\n`,
           en: `  Step ${a.step}: ${a.action} — ${a.reason}\n`,
-        }, locale));
+        }, locale))
       }
     }
 
     // Detect repeated clicks at similar coordinates
     const clicks = recentActions.filter(
-      (a) => a.action === "click" && a.x != null && a.y != null,
-    );
+      a => a.action === 'click' && a.x != null && a.y != null,
+    )
     if (clicks.length >= 3) {
-      const last = clicks[clicks.length - 1]!;
+      const last = clicks.at(-1)!
       const allNear = clicks.every(
-        (c) => Math.abs(c.x! - last.x!) <= 30 && Math.abs(c.y! - last.y!) <= 30,
-      );
+        c => Math.abs(c.x! - last.x!) <= 30 && Math.abs(c.y! - last.y!) <= 30,
+      )
       if (allNear) {
         parts.push(
           t({
@@ -253,7 +270,7 @@ export function planNextActionPrompt(
             zh: `- 禁止再次返回 (${last.x}, ${last.y}) 附近的坐标！\n\n`,
             en: `- Do NOT return to coordinates near (${last.x}, ${last.y}) again!\n\n`,
           }, locale),
-        );
+        )
       }
     }
   }
@@ -291,14 +308,14 @@ export function planNextActionPrompt(
       zh: `只返回 JSON，不要其他文字。`,
       en: `Return only JSON, no other text.`,
     }, locale),
-  );
+  )
 
-  return parts.join("");
+  return parts.join('')
 }
 
 export function queryPrompt(prompt: string, locale: Locale): string {
   return `${prompt}\n\n${t({
-    zh: "只返回纯 JSON，不要任何其他文字或 markdown。",
-    en: "Return only pure JSON, no other text or markdown.",
-  }, locale)}`;
+    zh: '只返回纯 JSON，不要任何其他文字或 markdown。',
+    en: 'Return only pure JSON, no other text or markdown.',
+  }, locale)}`
 }

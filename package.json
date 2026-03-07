@@ -1,14 +1,14 @@
 {
   "name": "giclaw",
+  "type": "module",
   "version": "0.3.0",
   "description": "AI agent for Genshin Impact cloud gaming",
-  "type": "module",
   "license": "MIT",
+  "homepage": "https://giclaw.cn",
   "repository": {
     "type": "git",
     "url": "https://github.com/caterpi11ar/giclaw.git"
   },
-  "homepage": "https://giclaw.cn",
   "keywords": [
     "genshin-impact",
     "ai-agent",
@@ -16,9 +16,6 @@
     "automation",
     "playwright"
   ],
-  "engines": {
-    "node": ">=20"
-  },
   "bin": {
     "giclaw": "dist/cli.js"
   },
@@ -26,6 +23,9 @@
     "dist",
     "skills"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "prepublishOnly": "npm run build",
     "build": "tsc && cp -r src/web/public dist/web/public",
@@ -35,7 +35,9 @@
     "test": "vitest run",
     "docs:dev": "pnpm --dir docs start",
     "docs:build": "pnpm --dir docs build",
-    "docs:serve": "pnpm --dir docs serve"
+    "docs:serve": "pnpm --dir docs serve",
+    "lint": "eslint --fix",
+    "typecheck": "tsc -b --noEmit"
   },
   "dependencies": {
     "@fastify/static": "^8.0.0",
@@ -52,9 +54,11 @@
     "zod": "^3.25.0"
   },
   "devDependencies": {
+    "@antfu/eslint-config": "^7.7.0",
     "@types/node": "^22.15.0",
     "@types/node-cron": "^3.0.0",
     "@types/react": "^18.3.0",
+    "eslint": "^10.0.3",
     "tsx": "^4.0.0",
     "typescript": "^5.8.0",
     "vitest": "^3.2.0"

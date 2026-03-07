@@ -1,8 +1,8 @@
-import { Box, Text } from "ink";
-import type { RunResult } from "../../tasks/task-runner.js";
+import type { RunResult } from '../../tasks/task-runner.js'
+import { Box, Text } from 'ink'
 
 interface TaskResultsProps {
-  lastResult: RunResult | null;
+  lastResult: RunResult | null
 }
 
 export function TaskResults({ lastResult }: TaskResultsProps) {
@@ -11,11 +11,11 @@ export function TaskResults({ lastResult }: TaskResultsProps) {
       <Box marginTop={1}>
         <Text dimColor>No runs yet</Text>
       </Box>
-    );
+    )
   }
 
-  const succeeded = lastResult.results.filter((r) => r.success).length;
-  const total = lastResult.results.length;
+  const succeeded = lastResult.results.filter(r => r.success).length
+  const total = lastResult.results.length
 
   return (
     <Box flexDirection="column" marginTop={1}>
@@ -23,24 +23,31 @@ export function TaskResults({ lastResult }: TaskResultsProps) {
         <Text bold>Last Run</Text>
         <Text> </Text>
         <Text dimColor>
-          {succeeded}/{total} succeeded ·{" "}
+          {succeeded}
+          /
+          {total}
+          {' '}
+          succeeded ·
+          {' '}
           {lastResult.startedAt.toLocaleString()}
         </Text>
       </Box>
-      {lastResult.results.map((r) => (
+      {lastResult.results.map(r => (
         <Box key={r.taskId}>
-          <Text color={r.success ? "green" : "red"}>
-            {r.success ? " ✓ " : " ✗ "}
+          <Text color={r.success ? 'green' : 'red'}>
+            {r.success ? ' ✓ ' : ' ✗ '}
           </Text>
           <Text>{r.taskId.padEnd(24)}</Text>
           <Text dimColor>
-            {(r.durationMs / 1000).toFixed(1).padStart(6)}s{" "}
+            {(r.durationMs / 1000).toFixed(1).padStart(6)}
+            s
+            {' '}
           </Text>
-          <Text color={r.success ? "green" : "red"}>
+          <Text color={r.success ? 'green' : 'red'}>
             {r.success ? r.message : (r.error?.message ?? r.message)}
           </Text>
         </Box>
       ))}
     </Box>
-  );
+  )
 }

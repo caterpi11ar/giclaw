@@ -1,15 +1,15 @@
-import { z } from "zod";
-import { PATHS } from "./paths.js";
+import { z } from 'zod'
+import { PATHS } from './paths.js'
 
 export const appConfigSchema = z.object({
-  locale: z.enum(["zh", "en"]).default("zh"),
+  locale: z.enum(['zh', 'en']).default('zh'),
 
   browser: z
     .object({
       startupUrl: z
         .string()
         .url()
-        .default("https://ys.mihoyo.com/cloud/"),
+        .default('https://ys.mihoyo.com/cloud/'),
       headless: z.boolean().default(true),
       viewport: z
         .object({
@@ -24,7 +24,7 @@ export const appConfigSchema = z.object({
 
   login: z
     .object({
-      successSelector: z.string().default(".wel-card__content--start"),
+      successSelector: z.string().default('.wel-card__content--start'),
       timeoutMs: z.number().default(300_000),
       pollIntervalMs: z.number().default(500),
     })
@@ -32,35 +32,35 @@ export const appConfigSchema = z.object({
 
   startGame: z
     .object({
-      startSelector: z.string().default(".wel-card__content--start"),
-      dismissSelectors: z.array(z.string()).default([".guide-close-btn"]),
+      startSelector: z.string().default('.wel-card__content--start'),
+      dismissSelectors: z.array(z.string()).default(['.guide-close-btn']),
     })
     .default({}),
 
   model: z
     .object({
-      name: z.string().default(""),
-      baseUrl: z.string().default(""),
-      apiKey: z.string().default(""),
+      name: z.string().default(''),
+      baseUrl: z.string().default(''),
+      apiKey: z.string().default(''),
     })
     .default({}),
 
   tasks: z
     .object({
       enabled: z.array(z.string()).default([
-        "welkin-moon",
-        "claim-mail",
-        "expedition-collect",
-        "battle-pass-claim",
+        'welkin-moon',
+        'claim-mail',
+        'expedition-collect',
+        'battle-pass-claim',
       ]),
-      skillsDirs: z.array(z.string()).default([PATHS.builtinSkillsDir, "./skills", PATHS.skillsDir]),
+      skillsDirs: z.array(z.string()).default([PATHS.builtinSkillsDir, './skills', PATHS.skillsDir]),
     })
     .default({}),
 
   schedule: z
     .object({
-      cron: z.string().default("0 6 * * *"),
-      timezone: z.string().default("Asia/Shanghai"),
+      cron: z.string().default('0 6 * * *'),
+      timezone: z.string().default('Asia/Shanghai'),
     })
     .default({}),
 
@@ -84,7 +84,7 @@ export const appConfigSchema = z.object({
     })
     .default({}),
 
-  logLevel: z.enum(["debug", "info", "warn", "error"]).default("info"),
-});
+  logLevel: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+})
 
-export type AppConfig = z.infer<typeof appConfigSchema>;
+export type AppConfig = z.infer<typeof appConfigSchema>

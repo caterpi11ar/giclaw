@@ -1,10 +1,10 @@
-import type {ReactNode} from 'react';
-import Link from '@docusaurus/Link';
-import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
-import Layout from '@theme/Layout';
-import Heading from '@theme/Heading';
+import type { ReactNode } from 'react'
+import Link from '@docusaurus/Link'
+import useDocusaurusContext from '@docusaurus/useDocusaurusContext'
+import Heading from '@theme/Heading'
+import Layout from '@theme/Layout'
 
-import styles from './index.module.css';
+import styles from './index.module.css'
 
 const features = [
   {
@@ -27,10 +27,10 @@ const features = [
     icon: '📊',
     description: '实时 TUI 仪表盘，随时掌握任务执行状态、日志输出和运行数据。',
   },
-];
+]
 
 function HomepageHero() {
-  const {siteConfig} = useDocusaurusContext();
+  const { siteConfig } = useDocusaurusContext()
   return (
     <header className={styles.hero}>
       <div className={styles.heroInner}>
@@ -46,7 +46,8 @@ function HomepageHero() {
             </Link>
             <Link
               className={styles.secondaryButton}
-              href="https://github.com/caterpi11ar/giclaw">
+              href="https://github.com/caterpi11ar/giclaw"
+            >
               GitHub
             </Link>
           </div>
@@ -80,7 +81,7 @@ function HomepageHero() {
         </div>
       </div>
     </header>
-  );
+  )
 }
 
 function HomepageFeatures() {
@@ -91,11 +92,12 @@ function HomepageFeatures() {
           为什么选择 giclaw
         </Heading>
         <div className={styles.featuresCard}>
-          {features.map(({title, icon, description}, idx) => (
+          {features.map(({ title, icon, description }, idx) => (
             <div
               key={idx}
               className={styles.featureCell}
-              style={{animationDelay: `${idx * 0.1}s`}}>
+              style={{ animationDelay: `${idx * 0.1}s` }}
+            >
               <div className={styles.featureDecorator}>
                 <div className={styles.decoratorGrid} />
                 <div className={styles.decoratorIcon}>{icon}</div>
@@ -109,7 +111,7 @@ function HomepageFeatures() {
         </div>
       </div>
     </section>
-  );
+  )
 }
 
 function HomepageCta() {
@@ -131,13 +133,14 @@ function HomepageCta() {
           </Link>
           <Link
             className={styles.ctaOutlineButton}
-            href="https://github.com/caterpi11ar/giclaw">
+            href="https://github.com/caterpi11ar/giclaw"
+          >
             GitHub
           </Link>
         </div>
       </div>
     </section>
-  );
+  )
 }
 
 export default function Home(): ReactNode {
@@ -154,5 +157,5 @@ export default function Home(): ReactNode {
         <HomepageCta />
       </div>
     </Layout>
-  );
+  )
 }

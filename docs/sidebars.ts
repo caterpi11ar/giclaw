@@ -1,4 +1,4 @@
-import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
+import type { SidebarsConfig } from '@docusaurus/plugin-content-docs'
 
 const sidebars: SidebarsConfig = {
   docsSidebar: [
@@ -20,6 +20,6 @@ const sidebars: SidebarsConfig = {
     'contributing',
     'faq',
   ],
-};
+}
 
-export default sidebars;
+export default sidebars
