@@ -32,6 +32,29 @@ describe('gateway skill catalog', () => {
       .toEqual(['welkin-moon', 'claim-mail'])
   })
 
+  it('resolves configured routines and rejects unknown names', async () => {
+    const config = appConfigSchema.parse({
+      model: {
+        name: 'test-model',
+        baseUrl: 'https://example.test/v1',
+        apiKey: 'test-key',
+        family: 'openai',
+      },
+      tasks: {
+        enabled: ['welkin-moon', 'claim-mail'],
+        skillsDirs: [resolve('skills')],
+        routines: { daily: ['claim-mail'] },
+      },
+    })
+
+    const gateway = new Gateway(config)
+    await gateway.init()
+
+    expect(gateway.resolveRoutine('daily')).toEqual(['claim-mail'])
+    expect(gateway.resolveRoutine('missing')).toBeNull()
+    expect(gateway.resolveRoutine('toString')).toBeNull()
+  })
+
   it('fails startup when no skills can be loaded', async () => {
     const emptyDir = await mkdtemp(join(tmpdir(), 'giclaw-empty-skills-'))
     const config = appConfigSchema.parse({

@@ -1,3 +1,4 @@
+import type { RunTrigger } from '../queue/types.js'
 import { z } from 'zod'
 import { sanitizeBoundedText } from '../utils/logger.js'
 
@@ -14,7 +15,7 @@ export interface TranscriptEntry {
 
 export interface RunSummary {
   runId: string
-  trigger: 'cron' | 'manual' | 'api'
+  trigger: RunTrigger
   startedAt: string
   completedAt: string
   results: Array<{
@@ -45,7 +46,7 @@ const runResultSchema = z.object({
 
 export const runSummarySchema: z.ZodType<RunSummary> = z.object({
   runId: identifierSchema,
-  trigger: z.enum(['cron', 'manual', 'api']),
+  trigger: z.enum(['cron', 'manual', 'api', 'extension']),
   startedAt: z.string(),
   completedAt: z.string(),
   results: z.array(runResultSchema).max(100),

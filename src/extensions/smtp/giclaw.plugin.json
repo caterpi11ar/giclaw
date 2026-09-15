@@ -1,0 +1,150 @@
+{
+  "id": "smtp",
+  "name": "Email (SMTP)",
+  "description": "Email Giclaw run notifications over SMTP (STARTTLS, implicit TLS or a loopback relay).",
+  "version": "0.1.0",
+  "categories": ["integrations"],
+  "activation": {
+    "onStartup": true
+  },
+  "enabledByDefault": false,
+  "channels": ["smtp"],
+  "configContracts": {
+    "secretInputs": {
+      "paths": [
+        {
+          "path": "password",
+          "expected": "string",
+          "ownerKind": "account"
+        }
+      ],
+      "bundledDefaultEnabled": false
+    },
+    "dangerousFlags": [
+      {
+        "path": "rejectUnauthorized",
+        "equals": false
+      }
+    ]
+  },
+  "uiHints": {
+    "host": {
+      "label": "SMTP host",
+      "help": "Relay hostname, e.g. smtp.example.com."
+    },
+    "port": {
+      "label": "Port",
+      "help": "587 for STARTTLS (default), 465 for implicit TLS, 25 for a local relay."
+    },
+    "secure": {
+      "label": "Transport security",
+      "help": "starttls | implicit | none. \"none\" is only allowed for a loopback host."
+    },
+    "user": {
+      "label": "Username"
+    },
+    "password": {
+      "label": "Password",
+      "sensitive": true,
+      "help": "Prefer env:SMTP_PASSWORD or file:/run/secrets/smtp-password."
+    },
+    "from": {
+      "label": "From address",
+      "help": "Bare address only, e.g. giclaw@example.com."
+    },
+    "to": {
+      "label": "Default recipients"
+    },
+    "targets": {
+      "label": "Targets",
+      "help": "Named recipient groups referenced by notifications.routes[].target."
+    },
+    "rejectUnauthorized": {
+      "label": "Verify TLS certificate",
+      "sensitive": true,
+      "advanced": true,
+      "help": "Set false only for a trusted internal relay with a private certificate."
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["host", "from"],
+    "properties": {
+      "host": {
+        "type": "string",
+        "minLength": 1
+      },
+      "port": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 65535
+      },
+      "secure": {
+        "type": "string",
+        "enum": ["starttls", "implicit", "none"]
+      },
+      "user": {
+        "type": "string",
+        "minLength": 1
+      },
+      "password": {
+        "type": "string",
+        "minLength": 1
+      },
+      "from": {
+        "type": "string",
+        "minLength": 3,
+        "description": "Bare sender address; also the default From header."
+      },
+      "to": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "defaultTarget": {
+        "type": "string",
+        "minLength": 1
+      },
+      "targets": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["to"],
+          "properties": {
+            "to": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "from": {
+              "type": "string"
+            },
+            "subjectPrefix": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "subjectPrefix": {
+        "type": "string"
+      },
+      "timeoutMs": {
+        "type": "integer",
+        "minimum": 1000,
+        "maximum": 120000
+      },
+      "rejectUnauthorized": {
+        "type": "boolean"
+      },
+      "clientName": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

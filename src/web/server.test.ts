@@ -3,6 +3,7 @@ import Fastify from 'fastify'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { logger } from '../utils/logger.js'
 import { registerApi } from './api.js'
+import { isSelfAuthenticatingPluginRoute, registerPluginRoutes } from './plugin-routes.js'
 import { registerWebSecurity } from './security.js'
 import { MAX_WEB_SOCKET_PAYLOAD_BYTES, startWebServer } from './server.js'
 import { registerWebSocket } from './ws.js'
@@ -26,6 +27,10 @@ vi.mock('@fastify/static', () => ({ default: 'static-plugin' }))
 vi.mock('@fastify/websocket', () => ({ default: 'websocket-plugin' }))
 vi.mock('./api.js', () => ({ registerApi: vi.fn() }))
 vi.mock('./security.js', () => ({ registerWebSecurity: vi.fn() }))
+vi.mock('./plugin-routes.js', () => ({
+  isSelfAuthenticatingPluginRoute: vi.fn(() => true),
+  registerPluginRoutes: vi.fn(),
+}))
 vi.mock('./ws.js', () => ({ registerWebSocket: vi.fn() }))
 
 describe('web server', () => {
@@ -33,6 +38,34 @@ describe('web server', () => {
     mocks.app.register.mockResolvedValue(undefined)
     mocks.app.listen.mockResolvedValue('http://127.0.0.1:4321')
     mocks.app.close.mockResolvedValue(undefined)
+  })
+
+  it('mounts plugin routes when a plugin bridge is supplied', async () => {
+    const info = vi.spyOn(logger, 'info').mockImplementation(() => {})
+    const gateway = {
+      config: { web: { port: 4321 } },
+    } as unknown as Gateway
+    const capabilities = { listRoutes: vi.fn(() => []) }
+    const pluginLogger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+    const host = { getStatus: vi.fn(() => []) }
+
+    const handle = await startWebServer(gateway, {
+      capabilities,
+      logger: pluginLogger,
+      host,
+    } as never)
+
+    expect(registerWebSecurity).toHaveBeenCalledWith(mocks.app, 4321, undefined, {
+      isSelfAuthenticating: expect.any(Function),
+    })
+    const options = vi.mocked(registerWebSecurity).mock.calls.at(-1)?.[3]
+    expect(options?.isSelfAuthenticating?.('POST', '/api/ext/example')).toBe(true)
+    expect(isSelfAuthenticatingPluginRoute).toHaveBeenCalledWith(capabilities, 'POST', '/api/ext/example')
+    expect(registerApi).toHaveBeenCalledWith(mocks.app, gateway, { capabilities, logger: pluginLogger, host })
+    expect(registerPluginRoutes).toHaveBeenCalledWith(mocks.app, capabilities, pluginLogger)
+    expect(info).toHaveBeenCalledWith('Web panel running at http://127.0.0.1:4321')
+
+    await handle.close()
   })
 
   it('registers transports and listens on the configured port', async () => {

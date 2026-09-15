@@ -51,28 +51,40 @@ function isProtectedPath(path: string): boolean {
   return path === '/api' || path.startsWith('/api/') || path === '/ws'
 }
 
+export interface WebSecurityOptions {
+  /**
+   * Returns true for plugin routes that verify their own credentials.
+   * Those routes skip the dashboard session cookie and the host allowlist
+   * because their callers are remote services, not the local dashboard.
+   */
+  isSelfAuthenticating?: (method: string, path: string) => boolean
+}
+
 export function registerWebSecurity(
   app: FastifyInstance,
   port: number,
   sessionToken = PROCESS_SESSION_TOKEN,
+  options: WebSecurityOptions = {},
 ): void {
   const allowedHosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`])
 
   app.addHook('onRequest', async (request, reply) => {
     setSecurityHeaders(reply, port)
 
+    const path = requestPath(request)
+    const selfAuthenticating = options.isSelfAuthenticating?.(request.method, path) === true
+
     const host = request.headers.host?.toLowerCase()
-    if (!host || !allowedHosts.has(host)) {
+    if (!selfAuthenticating && (!host || !allowedHosts.has(host))) {
       return reply.status(403).send({ error: 'Forbidden host' })
     }
 
     const origin = request.headers.origin?.toLowerCase()
-    if (origin && origin !== `http://${host}`) {
+    if (!selfAuthenticating && origin && origin !== `http://${host}`) {
       return reply.status(403).send({ error: 'Forbidden origin' })
     }
 
-    const path = requestPath(request)
-    if (isProtectedPath(path) && !hasSessionCookie(request.headers.cookie, sessionToken)) {
+    if (!selfAuthenticating && isProtectedPath(path) && !hasSessionCookie(request.headers.cookie, sessionToken)) {
       return reply.status(401).send({ error: 'Authentication required' })
     }
 

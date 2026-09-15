@@ -12,6 +12,7 @@ const typeOnlyFiles = new Set([
   'src/agent/types.ts',
   'src/gateway/types.ts',
   'src/model/types.ts',
+  'src/plugins/types.ts',
   'src/queue/types.ts',
   'src/tasks/base-task.ts',
   'src/tools/types.ts',

@@ -3,6 +3,7 @@ import type { Gateway } from './gateway.js'
 import process from 'node:process'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { appConfigSchema } from '../config/schema.js'
+import { bootstrapPlugins } from '../plugins/bootstrap.js'
 import { renderDashboard } from '../tui/render.js'
 import { logger } from '../utils/logger.js'
 import { startWebServer } from '../web/server.js'
@@ -16,6 +17,16 @@ const mocks = vi.hoisted(() => ({
   },
   Gateway: vi.fn(),
   webClose: vi.fn(),
+  pluginShutdown: vi.fn(),
+  pluginHost: { capabilities: {}, getStatus: vi.fn(() => []) },
+}))
+
+vi.mock('../plugins/bootstrap.js', () => ({
+  bootstrapPlugins: vi.fn(async () => ({
+    host: mocks.pluginHost,
+    dispatcher: {},
+    shutdown: mocks.pluginShutdown,
+  })),
 }))
 
 vi.mock('./gateway.js', () => ({
@@ -44,6 +55,7 @@ describe('gateway lifecycle', () => {
     mocks.gateway.start.mockResolvedValue(undefined)
     mocks.gateway.shutdown.mockResolvedValue(undefined)
     mocks.webClose.mockResolvedValue(undefined)
+    mocks.pluginShutdown.mockResolvedValue(undefined)
     vi.mocked(startWebServer).mockResolvedValue({ close: mocks.webClose })
     Object.defineProperty(process.stdout, 'isTTY', { configurable: true, value: true })
   })
@@ -66,7 +78,11 @@ describe('gateway lifecycle', () => {
     await vi.waitFor(() => expect(mocks.gateway.start).toHaveBeenCalledOnce())
 
     expect(mocks.gateway.init).toHaveBeenCalledOnce()
-    expect(startWebServer).toHaveBeenCalledWith(mocks.gateway)
+    expect(startWebServer).toHaveBeenCalledWith(mocks.gateway, {
+      capabilities: mocks.pluginHost.capabilities,
+      logger: expect.anything(),
+      host: mocks.pluginHost,
+    })
     expect(renderDashboard).toHaveBeenCalledWith(mocks.gateway)
     expect(handlers.has('SIGTERM')).toBe(true)
     expect(handlers.has('SIGINT')).toBe(true)
@@ -74,6 +90,7 @@ describe('gateway lifecycle', () => {
     await handlers.get('SIGTERM')?.()
     expect(mocks.gateway.shutdown).toHaveBeenCalledOnce()
     expect(mocks.webClose).toHaveBeenCalledOnce()
+    expect(mocks.pluginShutdown).toHaveBeenCalledOnce()
     expect(exit).toHaveBeenCalledWith(0)
   })
 
@@ -107,6 +124,39 @@ describe('gateway lifecycle', () => {
 
     expect(startWebServer).not.toHaveBeenCalled()
     expect(renderDashboard).not.toHaveBeenCalled()
+  })
+
+  it('keeps the daemon running when plugin bootstrap throws', async () => {
+    vi.mocked(bootstrapPlugins).mockRejectedValueOnce(new Error('plugin discovery failed'))
+    const error = vi.spyOn(logger, 'error').mockImplementation(() => {})
+    const handlers = new Map<string, () => Promise<void>>()
+    Object.defineProperty(process.stdout, 'isTTY', { configurable: true, value: false })
+    vi.spyOn(process, 'on').mockImplementation(((event: string, handler: () => Promise<void>) => {
+      handlers.set(event, handler)
+      return process
+    }) as typeof process.on)
+    const exit = vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never)
+
+    void startGateway(createConfig())
+    await vi.waitFor(() => expect(mocks.gateway.start).toHaveBeenCalledOnce())
+
+    expect(error).toHaveBeenCalledWith(
+      'Plugin bootstrap failed; continuing without plugins',
+      expect.objectContaining({ message: 'plugin discovery failed' }),
+    )
+    expect(startWebServer).toHaveBeenCalledWith(mocks.gateway, undefined)
+
+    await handlers.get('SIGTERM')?.()
+
+    expect(mocks.pluginShutdown).not.toHaveBeenCalled()
+    expect(mocks.gateway.shutdown).toHaveBeenCalledOnce()
+    expect(exit).toHaveBeenCalledWith(0)
+
+    vi.mocked(bootstrapPlugins).mockImplementation(async () => ({
+      host: mocks.pluginHost,
+      dispatcher: {},
+      shutdown: mocks.pluginShutdown,
+    }) as never)
   })
 
   it('shuts down cleanly when the web surface is disabled', async () => {

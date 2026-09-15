@@ -1,37 +1,8 @@
 import cron from 'node-cron'
 import { z } from 'zod'
+import { PLUGIN_ID_PATTERN } from '../plugins/manifest.js'
+import { hasNoUrlCredentials, isHttpsOrLoopbackHttp } from '../utils/url.js'
 import { PATHS } from './paths.js'
-
-function isHttpsOrLoopbackHttp(value: string): boolean {
-  if (value === '')
-    return true
-
-  if (value !== value.trim() || !/^https?:\/\//iu.test(value))
-    return false
-
-  try {
-    const url = new URL(value)
-    return url.protocol === 'https:'
-      || (url.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname))
-  }
-  catch {
-    return false
-  }
-}
-
-function hasNoUrlCredentials(value: string): boolean {
-  if (value === '')
-    return true
-
-  try {
-    const url = new URL(value)
-    const authority = value.slice(value.indexOf('://') + 3).split(/[/?#]/u, 1)[0]!
-    return !authority.includes('@') && !url.username && !url.password
-  }
-  catch {
-    return false
-  }
-}
 
 export const modelBaseUrlSchema = z.string().refine(
   isHttpsOrLoopbackHttp,
@@ -154,6 +125,45 @@ export const appConfigSchema = z.object({
   queue: z
     .object({
       maxDepth: z.number().int().positive().max(10_000).default(10),
+    })
+    .default({}),
+
+  /**
+   * Plugin system configuration, mirroring openclaw's `plugins` segment.
+   * `enabled` defaults to empty: no plugin runs, no outbound request is made
+   * and no inbound route is opened unless explicitly opted in.
+   */
+  plugins: z
+    .object({
+      enabled: z.array(z.string().regex(PLUGIN_ID_PATTERN)).max(100).default([]),
+      /** Additional directories scanned for external `<id>/giclaw.plugin.json` packages. */
+      dirs: z.array(z.string().min(1).max(1_000)).max(50).default([]),
+      /** Per-plugin private configuration: `entries.<id>.config`. */
+      entries: z.record(z.object({ config: z.record(z.unknown()).default({}) })).default({}),
+    })
+    .default({}),
+
+  /** Channel connection settings (`channels.<channelId>`), secrets usually via `env:` refs. */
+  channels: z.record(z.record(z.unknown())).default({}),
+
+  /** Run-outcome fan-out to channels. Empty `routes` disables all notifications. */
+  notifications: z
+    .object({
+      on: z
+        .array(z.enum(['run:complete', 'run:error']))
+        .max(2)
+        .default(['run:complete', 'run:error']),
+      routes: z
+        .array(
+          z.object({
+            channel: z.string().min(1).max(100),
+            target: z.string().min(1).max(200).optional(),
+            /** Sending account, for channels that are configured more than once. */
+            account: z.string().min(1).max(64).optional(),
+          }),
+        )
+        .max(50)
+        .default([]),
     })
     .default({}),
 

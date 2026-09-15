@@ -1,6 +1,8 @@
 import type { AppConfig } from '../config/schema.js'
+import type { PluginBootstrapHandle } from '../plugins/bootstrap.js'
 import type { WebServerHandle } from '../web/server.js'
 import process from 'node:process'
+import { bootstrapPlugins } from '../plugins/bootstrap.js'
 import { TimeoutError } from '../utils/errors.js'
 import { logger } from '../utils/logger.js'
 import { Gateway } from './gateway.js'
@@ -40,12 +42,24 @@ export async function startGateway(config: AppConfig): Promise<never> {
   await gateway.start()
 
   let webServer: WebServerHandle | undefined
+  let plugins: PluginBootstrapHandle | undefined
+
+  // Plugins load before the web server so inbound routes are mounted with the
+  // rest of the API and notification channels exist before the first run.
+  try {
+    plugins = await bootstrapPlugins(config, gateway)
+  }
+  catch (err) {
+    logger.error('Plugin bootstrap failed; continuing without plugins', err)
+  }
 
   // Start web server if enabled
   if (config.web.enabled) {
     try {
       const { startWebServer } = await import('../web/server.js')
-      webServer = await startWebServer(gateway)
+      webServer = await startWebServer(gateway, plugins
+        ? { capabilities: plugins.host.capabilities, logger, host: plugins.host }
+        : undefined)
     }
     catch (err) {
       logger.warn('Web server not available, continuing without it', err)
@@ -72,6 +86,7 @@ export async function startGateway(config: AppConfig): Promise<never> {
         const operations = Promise.allSettled([
           gateway.shutdown(),
           webServer?.close() ?? Promise.resolve(),
+          plugins?.shutdown() ?? Promise.resolve(),
         ])
         const results = await settleShutdown(operations)
         const gatewayResult = results[0]

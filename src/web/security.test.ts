@@ -34,6 +34,18 @@ describe('web security integration', () => {
     return app
   }
 
+  async function buildSelfAuthenticatingApp() {
+    const app = Fastify()
+    apps.push(app)
+    registerWebSecurity(app, PORT, TOKEN, {
+      isSelfAuthenticating: (method, path) => method === 'POST' && path === '/api/ext/webhook',
+    })
+    app.post('/api/ext/webhook', async () => ({ accepted: true }))
+    app.post('/api/status', async () => ({ accepted: true }))
+    await app.ready()
+    return app
+  }
+
   async function authenticatedCookie(app: Awaited<ReturnType<typeof buildApp>>): Promise<string> {
     const response = await app.inject({
       method: 'GET',
@@ -69,6 +81,28 @@ describe('web security integration', () => {
     expect(head.headers['set-cookie']).toContain(`${WEB_SESSION_COOKIE}=`)
     const post = await app.inject({ method: 'POST', url: '/', headers: { host: HOST } })
     expect(post.headers['set-cookie']).toBeUndefined()
+  })
+
+  it('lets self-authenticating plugin routes bypass host, origin and session checks', async () => {
+    const app = await buildSelfAuthenticatingApp()
+
+    const accepted = await app.inject({
+      method: 'POST',
+      url: '/api/ext/webhook',
+      headers: { host: 'evil.example.test', origin: 'https://evil.example.test' },
+      payload: { command: 'status' },
+    })
+    expect(accepted.statusCode).toBe(200)
+    expect(accepted.json()).toEqual({ accepted: true })
+
+    const rejected = await app.inject({
+      method: 'POST',
+      url: '/api/status',
+      headers: { host: 'evil.example.test', origin: 'https://evil.example.test' },
+      payload: {},
+    })
+    expect(rejected.statusCode).toBe(403)
+    expect(rejected.json()).toEqual({ error: 'Forbidden host' })
   })
 
   it('uses a process-random token when no test token is provided', async () => {

@@ -1,0 +1,107 @@
+{
+  "id": "webhook",
+  "name": "Webhook",
+  "description": "Signed outbound notifications and an authenticated inbound webhook that can trigger Giclaw runs.",
+  "version": "0.1.0",
+  "categories": ["integrations"],
+  "activation": {
+    "onStartup": true
+  },
+  "enabledByDefault": false,
+  "channels": ["webhook"],
+  "configContracts": {
+    "secretInputs": {
+      "paths": [
+        {
+          "path": "endpoints.*.secret",
+          "expected": "string",
+          "ownerKind": "endpoint"
+        },
+        {
+          "path": "inbound.secret",
+          "expected": "string",
+          "ownerKind": "route"
+        }
+      ]
+    }
+  },
+  "uiHints": {
+    "endpoints.*.secret": {
+      "label": "HMAC signing secret",
+      "sensitive": true
+    },
+    "inbound.secret": {
+      "label": "Inbound HMAC secret",
+      "sensitive": true
+    },
+    "defaultEndpoint": {
+      "label": "Default endpoint",
+      "help": "Endpoint used by notification routes that do not name a target."
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "endpoints": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "description": "HTTPS (or loopback HTTP) destination for run notifications."
+            },
+            "secret": {
+              "type": "string",
+              "minLength": 1,
+              "description": "HMAC-SHA256 signing secret."
+            },
+            "headers": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "required": ["url"]
+        }
+      },
+      "defaultEndpoint": {
+        "type": "string",
+        "minLength": 1
+      },
+      "inbound": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^/"
+          },
+          "secret": {
+            "type": "string",
+            "minLength": 1
+          },
+          "commands": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["status", "history", "run"]
+            },
+            "minItems": 1
+          },
+          "maxBodyBytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1048576
+          }
+        },
+        "required": ["path", "secret"]
+      }
+    }
+  }
+}

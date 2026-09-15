@@ -8,6 +8,13 @@ const sidebars: SidebarsConfig = {
     'cli',
     'daemon-mode',
     'architecture',
+    {
+      type: 'category',
+      label: '集成',
+      items: [
+        'extensions',
+      ],
+    },
     'roadmap',
     {
       type: 'category',

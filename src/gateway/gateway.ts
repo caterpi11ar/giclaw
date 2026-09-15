@@ -1,5 +1,6 @@
 import type { AppConfig } from '../config/schema.js'
 import type { RunSummary } from '../memory/types.js'
+import type { RunTrigger } from '../queue/types.js'
 import type { RunResult } from '../tasks/task-runner.js'
 import type { Phase, ProgressEvent } from '../utils/progress.js'
 import type { EnqueuedRunReceipt, GatewaySnapshot, IGateway } from './types.js'
@@ -128,11 +129,18 @@ export class Gateway implements IGateway {
     return this.taskRunner
   }
 
+  /** Resolve a configured routine name (`daily`, `rewards`, ...) to task ids. */
+  resolveRoutine(name: string): string[] | null {
+    // Guard against prototype keys (`toString`, `constructor`) leaking in as routines.
+    const routine = this.config.tasks.routines[name]
+    return Array.isArray(routine) ? routine : null
+  }
+
   /**
    * Enqueue a run through the FIFO queue. Returns when the run completes.
    */
   enqueueRun(
-    trigger: 'cron' | 'manual' | 'api',
+    trigger: RunTrigger,
     taskIds?: string[],
   ): Promise<RunResult> {
     try {
@@ -148,7 +156,7 @@ export class Gateway implements IGateway {
    * enqueueRun(), this does not wait for the browser pipeline to finish.
    */
   enqueueRunAccepted(
-    trigger: 'cron' | 'manual' | 'api',
+    trigger: RunTrigger,
     taskIds?: string[],
   ): EnqueuedRunReceipt {
     const runId = randomUUID()
@@ -332,7 +340,7 @@ export class Gateway implements IGateway {
    */
   private async executePipeline(
     runId: string,
-    trigger: 'cron' | 'manual' | 'api',
+    trigger: RunTrigger,
     taskIds?: string[],
     signal?: AbortSignal,
   ): Promise<RunResult> {

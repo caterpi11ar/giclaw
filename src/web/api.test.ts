@@ -58,13 +58,38 @@ describe('hTTP API', () => {
     await Promise.all(apps.splice(0).map(app => app.close()))
   })
 
-  async function app() {
+  async function app(plugins?: Parameters<typeof registerApi>[2]) {
     const instance = Fastify()
     apps.push(instance)
-    registerApi(instance, gateway as unknown as Gateway)
+    if (plugins)
+      registerApi(instance, gateway as unknown as Gateway, plugins)
+    else
+      registerApi(instance, gateway as unknown as Gateway)
     await instance.ready()
     return instance
   }
+
+  it('returns an empty plugin list when no bridge is mounted', async () => {
+    const instance = await app()
+    const response = await instance.inject({ method: 'GET', url: '/api/plugins' })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual([])
+  })
+
+  it('returns plugin status through the bridge without leaking secrets', async () => {
+    const status = [{ id: 'webhook', name: 'Webhook', enabled: true, loaded: true }]
+    const instance = await app({
+      capabilities: { getChannel: vi.fn() },
+      logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+      host: { getStatus: vi.fn(() => status) },
+    } as unknown as Parameters<typeof registerApi>[2])
+
+    const response = await instance.inject({ method: 'GET', url: '/api/plugins' })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual(status)
+  })
 
   it('returns status, tasks, and a masked configuration', async () => {
     const lastRun = {

@@ -1,0 +1,380 @@
+{
+  "id": "feishu",
+  "name": "Feishu",
+  "description": "Deliver run notifications to Feishu/Lark and trigger configured routines from app events.",
+  "version": "0.1.0",
+  "categories": [
+    "integrations"
+  ],
+  "activation": {
+    "onStartup": true
+  },
+  "enabledByDefault": false,
+  "channels": [
+    "feishu"
+  ],
+  "configContracts": {
+    "secretInputs": {
+      "paths": [
+        {
+          "path": "appSecret",
+          "expected": "string",
+          "ownerKind": "account"
+        },
+        {
+          "path": "webhookSecret",
+          "expected": "string",
+          "ownerKind": "account"
+        },
+        {
+          "path": "encryptKey",
+          "expected": "string",
+          "ownerKind": "account"
+        },
+        {
+          "path": "verificationToken",
+          "expected": "string",
+          "ownerKind": "account"
+        }
+      ],
+      "bundledDefaultEnabled": false
+    }
+  },
+  "uiHints": {
+    "accounts": {
+      "label": "Accounts",
+      "help": "Per-tenant overrides; every key falls back to the top level."
+    },
+    "allowFrom": {
+      "label": "Allowed DM senders",
+      "help": "Empty means no allowlist. \"*\" is only honored with dmPolicy open."
+    },
+    "appSecret": {
+      "label": "App secret",
+      "sensitive": true,
+      "help": "Feishu self-built app secret; prefer env:FEISHU_APP_SECRET."
+    },
+    "connectionMode": {
+      "label": "Event transport",
+      "help": "websocket (default) dials out to Feishu and needs no public URL; webhook receives Feishu's HTTP callback."
+    },
+    "defaultAccount": {
+      "label": "Default account",
+      "help": "Account used by notifications.routes[].account when it is omitted."
+    },
+    "dmPolicy": {
+      "label": "Direct message policy",
+      "help": "pairing (default) replies with a pairing code, allowlist checks allowFrom, open requires allowFrom [\"*\"]."
+    },
+    "domain": {
+      "label": "Tenant domain",
+      "help": "feishu (default), lark, or an explicit base URL such as https://open.larksuite.com."
+    },
+    "encryptKey": {
+      "label": "Encrypt key",
+      "sensitive": true,
+      "help": "Verifies X-Lark-Signature and decrypts encrypted events; prefer env:FEISHU_ENCRYPT_KEY."
+    },
+    "groupAllowFrom": {
+      "label": "Allowed group chats"
+    },
+    "groupPolicy": {
+      "label": "Group policy",
+      "help": "allowlist (default), open, or disabled. open means no mention is required."
+    },
+    "groupSenderAllowFrom": {
+      "label": "Allowed group senders"
+    },
+    "groups": {
+      "label": "Per-chat overrides",
+      "help": "groups.<chat_id> overrides enabled / requireMention / allowFrom for one chat."
+    },
+    "inbound": {
+      "label": "Inbound events",
+      "help": "Routing for accepted events; the message text is never interpreted."
+    },
+    "inbound.routine": {
+      "label": "Routine",
+      "help": "Routine started by an accepted message, menu click, or card action."
+    },
+    "inbound.tasks": {
+      "label": "Tasks",
+      "help": "Used when no routine is configured."
+    },
+    "requireMention": {
+      "label": "Require a mention",
+      "help": "Defaults to true unless the effective group policy is open."
+    },
+    "targets": {
+      "label": "Targets",
+      "help": "Named chat destinations referenced by notifications.routes[].target."
+    },
+    "verificationToken": {
+      "label": "Verification token",
+      "sensitive": true,
+      "help": "Required in webhook mode; prefer env:FEISHU_VERIFICATION_TOKEN."
+    },
+    "webhookHost": {
+      "label": "Callback host",
+      "help": "Bind host of openclaw's own callback server; Giclaw reuses the web server."
+    },
+    "webhookPath": {
+      "label": "Callback path",
+      "help": "Default /feishu/events; mounted only in webhook mode."
+    },
+    "webhookPort": {
+      "label": "Callback port",
+      "help": "Bind port of openclaw's own callback server; Giclaw reuses web.port."
+    },
+    "webhookSecret": {
+      "label": "Custom bot signing secret",
+      "sensitive": true
+    },
+    "webhookUrl": {
+      "label": "Custom bot webhook",
+      "help": "https://open.feishu.cn/open-apis/bot/v2/hook/<token>"
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "type": "boolean"
+      },
+      "defaultAccount": {
+        "type": "string",
+        "minLength": 1,
+        "description": "Must match a key of accounts when accounts is present."
+      },
+      "connectionMode": {
+        "type": "string",
+        "enum": [
+          "websocket",
+          "webhook"
+        ],
+        "description": "Inbound event transport (default websocket: no public URL needed)."
+      },
+      "domain": {
+        "type": "string",
+        "minLength": 1,
+        "description": "Tenant origin: feishu (default), lark, or an explicit base URL. Use https://open.larksuite.com for Lark."
+      },
+      "appId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "appSecret": {
+        "type": "string",
+        "minLength": 1
+      },
+      "verificationToken": {
+        "type": "string",
+        "minLength": 1
+      },
+      "encryptKey": {
+        "type": "string",
+        "minLength": 1
+      },
+      "webhookPath": {
+        "type": "string",
+        "minLength": 1,
+        "description": "HTTP callback path; default /feishu/events. Only used in webhook mode."
+      },
+      "inbound": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Event routing; webhook mode additionally requires both encryptKey and verificationToken.",
+        "properties": {
+          "routine": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tasks": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "rateLimit": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
+              },
+              "windowMs": {
+                "type": "integer",
+                "minimum": 1000,
+                "maximum": 86400000
+              }
+            }
+          }
+        }
+      },
+      "mode": {
+        "type": "string",
+        "enum": [
+          "app",
+          "webhook"
+        ],
+        "description": "Defaults to app when appId+appSecret are set, otherwise webhook."
+      },
+      "webhookUrl": {
+        "type": "string",
+        "minLength": 1
+      },
+      "webhookSecret": {
+        "type": "string",
+        "minLength": 1
+      },
+      "defaultTarget": {
+        "type": "string",
+        "minLength": 1
+      },
+      "targets": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "chatId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Feishu chat id (oc_xxx) or any id of the declared receiveIdType."
+            },
+            "receiveIdType": {
+              "type": "string",
+              "enum": [
+                "chat_id",
+                "open_id",
+                "user_id",
+                "union_id",
+                "email"
+              ]
+            },
+            "webhookUrl": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Per-target custom-bot webhook; overrides the plugin-level webhookUrl."
+            }
+          }
+        }
+      },
+      "card": {
+        "type": "boolean",
+        "description": "Send an interactive card (default) instead of plain text."
+      },
+      "httpTimeoutMs": {
+        "type": "integer",
+        "minimum": 100,
+        "maximum": 300000
+      },
+      "dmPolicy": {
+        "type": "string",
+        "enum": [
+          "pairing",
+          "allowlist",
+          "open",
+          "disabled"
+        ],
+        "description": "Direct-message policy; open additionally requires allowFrom to contain \"*\"."
+      },
+      "allowFrom": {
+        "type": "array",
+        "maxItems": 500,
+        "items": {
+          "type": [
+            "string",
+            "number"
+          ]
+        }
+      },
+      "groupPolicy": {
+        "type": "string",
+        "enum": [
+          "open",
+          "disabled",
+          "allowlist",
+          "allowall"
+        ],
+        "description": "allowall is an alias of open."
+      },
+      "groupAllowFrom": {
+        "type": "array",
+        "maxItems": 500,
+        "items": {
+          "type": [
+            "string",
+            "number"
+          ]
+        }
+      },
+      "groupSenderAllowFrom": {
+        "type": "array",
+        "maxItems": 500,
+        "items": {
+          "type": [
+            "string",
+            "number"
+          ]
+        }
+      },
+      "requireMention": {
+        "type": "boolean"
+      },
+      "groups": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "requireMention": {
+              "type": "boolean"
+            },
+            "allowFrom": {
+              "type": "array",
+              "maxItems": 500,
+              "items": {
+                "type": [
+                  "string",
+                  "number"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "allowBots": {
+        "type": "boolean",
+        "description": "Accept events sent by another bot."
+      },
+      "webhookHost": {
+        "type": "string",
+        "minLength": 1,
+        "description": "Bind host of openclaw's own callback server; Giclaw reuses the web server."
+      },
+      "webhookPort": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 65535,
+        "description": "Bind port of openclaw's own callback server; Giclaw reuses web.port."
+      },
+      "accounts": {
+        "type": "object",
+        "description": "Per-tenant overrides. An account key accepts every top-level key except `accounts` and `defaultAccount`; anything it omits is inherited from the top level.",
+        "additionalProperties": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    }
+  }
+}

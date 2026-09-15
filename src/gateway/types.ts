@@ -1,4 +1,5 @@
 import type { RunSummary } from '../memory/types.js'
+import type { RunTrigger } from '../queue/types.js'
 import type { RunResult } from '../tasks/task-runner.js'
 import type { Phase, ProgressEvent } from '../utils/progress.js'
 
@@ -34,11 +35,11 @@ export interface EnqueuedRunReceipt {
 export interface IGateway {
   getSnapshot: () => GatewaySnapshot
   enqueueRun: (
-    trigger: 'cron' | 'manual' | 'api',
+    trigger: RunTrigger,
     taskIds?: string[],
   ) => Promise<RunResult>
   enqueueRunAccepted: (
-    trigger: 'cron' | 'manual' | 'api',
+    trigger: RunTrigger,
     taskIds?: string[],
   ) => EnqueuedRunReceipt
   runOnce: (taskIds?: string[]) => Promise<RunResult>

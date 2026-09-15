@@ -14,6 +14,7 @@
     <nav class="tabs" aria-label="Panel sections">
       <button class="tab-button active" data-tab="status" type="button">Status</button>
       <button class="tab-button" data-tab="logs" type="button">Logs</button>
+      <button class="tab-button" data-tab="plugins" type="button">Plugins</button>
       <button class="tab-button" data-tab="config" type="button">Config</button>
     </nav>
 
@@ -31,6 +32,12 @@
 
     <section id="panel-logs" class="tab-panel">
       <div id="log-container" class="card log-container" aria-live="polite"></div>
+    </section>
+
+    <section id="panel-plugins" class="tab-panel">
+      <div id="plugin-list" class="card">
+        <p class="muted">Loading plugins…</p>
+      </div>
     </section>
 
     <section id="panel-config" class="tab-panel">

@@ -68,6 +68,50 @@ giclaw run --routine rewards  # 显式运行完整奖励流程
 
 自定义技能只需在 `~/.giclaw/skills/` 下创建 `SKILL.md`，详见 [编写技能](https://giclaw.cn/docs/skills/writing-skills)。
 
+## 通知与集成
+
+内置四个默认关闭的连接器，把"跑完了"推出去，也能把外部信号拉进来：
+
+| 连接器 | 方向 | 能力 |
+|--------|------|------|
+| `feishu` | 出站 + 入站 | 群机器人 / 自建应用（多账号）推送互动卡片；事件默认走**长连接**（不需要公网或反向代理），消息 / 菜单点击 / 卡片交互触发已配置的 routine；私聊用配对码放行 |
+| `smtp` | 出站 | 邮件通知（STARTTLS / 隐式 TLS / loopback 中继） |
+| `imap` | 入站 | 只读监听邮箱（`IDLE` 推送，必要时退化为轮询），用 `mailauth` 真实校验 DKIM/SPF/DMARC、按认证强度门控发件人，来信即触发 routine，不会标记已读 |
+| `webhook` | 出站 + 入站 | HMAC-SHA256 签名 JSON 通知；我方签名的 `status` / `history` / `run` 控制接口 |
+
+最小用法（飞书群机器人，10 秒配好）：
+
+```json
+{
+  "plugins": {
+    "enabled": ["feishu"],
+    "entries": {
+      "feishu": {
+        "config": {
+          "webhookUrl": "https://open.feishu.cn/open-apis/bot/v2/hook/xxxx",
+          "webhookSecret": "env:FEISHU_WEBHOOK_SECRET"
+        }
+      }
+    }
+  },
+  "notifications": {
+    "on": ["run:complete", "run:error"],
+    "routes": [{ "channel": "feishu" }]
+  }
+}
+```
+
+```bash
+export FEISHU_WEBHOOK_SECRET=...
+giclaw plugins      # 确认插件已加载（[x]），失败会给出原因
+giclaw channels     # 查看已注册频道与通知路由
+giclaw daemon       # 通知由运行事件驱动，随 daemon 派发
+```
+
+密钥只支持 `env:NAME` 与 `file:/绝对路径` 两种引用（不执行命令），API 与面板回显一律 `***`。入站消息**永远不会被当成提示词**：只能映射到你已配置的 routine 或任务列表，避免一条泄露的消息变成任意执行。私聊配对码（每人每账号最多 3 个待处理）用 `giclaw pairing list` / `approve` / `revoke` 审批。发送失败的通知会落盘，Daemon 下次启动自动重投（`giclaw outbox` 查看 / 放弃）——重投只影响通知，不会把已成功的领取改写成失败。
+
+完整的启用步骤、飞书事件订阅配置（长连接 / HTTP 回调两种）、多账号与私聊配对、IMAP 发信人门控与安全边界见[扩展与连接器](https://giclaw.cn/docs/extensions)。
+
 ## License
 
 MIT

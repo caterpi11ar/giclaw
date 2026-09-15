@@ -1,5 +1,8 @@
 import type { Socket } from 'node:net'
 import type { Gateway } from '../gateway/gateway.js'
+import type { PluginCapabilities } from '../plugins/capabilities.js'
+import type { PluginHost } from '../plugins/host.js'
+import type { PluginLogger } from '../plugins/types.js'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import fastifyStatic from '@fastify/static'
@@ -7,17 +10,28 @@ import fastifyWebSocket from '@fastify/websocket'
 import Fastify from 'fastify'
 import { logger } from '../utils/logger.js'
 import { registerApi } from './api.js'
+import { isSelfAuthenticatingPluginRoute, registerPluginRoutes } from './plugin-routes.js'
 import { registerWebSecurity } from './security.js'
 import { registerWebSocket } from './ws.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 export const MAX_WEB_SOCKET_PAYLOAD_BYTES = 64 * 1024
 
+/** Plugin bridge handed to the web layer so inbound plugin routes can be mounted. */
+export interface WebPluginBridge {
+  capabilities: PluginCapabilities
+  logger: PluginLogger
+  host: PluginHost
+}
+
 export interface WebServerHandle {
   close: () => Promise<void>
 }
 
-export async function startWebServer(gateway: Gateway): Promise<WebServerHandle> {
+export async function startWebServer(
+  gateway: Gateway,
+  plugins?: WebPluginBridge,
+): Promise<WebServerHandle> {
   const app = Fastify({
     logger: false,
     // Daemon shutdown already stops accepting work before closing transports.
@@ -50,7 +64,14 @@ export async function startWebServer(gateway: Gateway): Promise<WebServerHandle>
   }
 
   try {
-    registerWebSecurity(app, port)
+    if (plugins) {
+      registerWebSecurity(app, port, undefined, {
+        isSelfAuthenticating: (method, path) => isSelfAuthenticatingPluginRoute(plugins.capabilities, method, path),
+      })
+    }
+    else {
+      registerWebSecurity(app, port)
+    }
 
     await app.register(fastifyWebSocket, {
       options: { maxPayload: MAX_WEB_SOCKET_PAYLOAD_BYTES },
@@ -69,7 +90,13 @@ export async function startWebServer(gateway: Gateway): Promise<WebServerHandle>
       prefix: '/',
     })
 
-    registerApi(app, gateway)
+    if (plugins) {
+      registerApi(app, gateway, plugins)
+      registerPluginRoutes(app, plugins.capabilities, plugins.logger)
+    }
+    else {
+      registerApi(app, gateway)
+    }
     registerWebSocket(app, gateway)
 
     await app.listen({ port, host: '127.0.0.1' })

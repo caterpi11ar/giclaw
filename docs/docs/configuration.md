@@ -58,9 +58,32 @@ title: 配置
     "maxArtifactBytes": 1073741824
   },
   "queue": { "maxDepth": 10 },
-  "logLevel": "info"
+  "logLevel": "info",
+  "plugins": {
+    "enabled": ["feishu"],
+    "dirs": [],
+    "entries": {
+      "feishu": {
+        "config": {
+          "mode": "app",
+          "appId": "cli_xxx",
+          "appSecret": "env:FEISHU_APP_SECRET",
+          "targets": { "ops": { "chatId": "oc_xxx" } }
+        }
+      }
+    }
+  },
+  "channels": {
+    "feishu": { "card": true }
+  },
+  "notifications": {
+    "on": ["run:complete", "run:error"],
+    "routes": [{ "channel": "feishu", "target": "ops" }]
+  }
 }
 ```
+
+> 插件与连接器（飞书 / 邮件 / Webhook）的完整配置见 [扩展与连接器](./extensions)。
 
 ## 配置项参考
 
@@ -151,3 +174,16 @@ title: 配置
 | 配置项 | 说明 | 默认值 |
 |--------|------|--------|
 | `queue.maxDepth` | 任务队列最大深度（防止堆积） | `10` |
+
+### 插件 / 通知
+
+| 配置项 | 说明 | 默认值 |
+|--------|------|--------|
+| `plugins.enabled` | 启用的插件 id 列表（`webhook` / `feishu` / `smtp` / `imap` 内置） | `[]` |
+| `plugins.dirs` | 外部插件目录（每个子目录含 `giclaw.plugin.json`） | `[]` |
+| `plugins.entries.<id>.config` | 单个插件的私有配置 | `{}` |
+| `channels.<id>` | 频道级配置（当前与 `plugins.entries.<id>.config` 等价，保留给多频道扩展） | — |
+| `notifications.on` | 触发通知的事件，可选 `run:complete` / `run:error` | `["run:complete", "run:error"]` |
+| `notifications.routes` | 通知路由：`{ channel, target? }`，逐个频道派发；失败只记日志 | `[]` |
+
+插件密钥支持 `env:NAME` 与 `file:/abs/path` 两种间接引用；`giclaw plugins` 会列出每个插件的加载状态、频道、服务与路由，`GET /api/plugins` 提供同样的信息。

@@ -1,10 +1,15 @@
 import type { FastifyInstance } from 'fastify'
 import type { Gateway } from '../gateway/gateway.js'
 import type { TaskDefinition } from '../tasks/base-task.js'
+import type { WebPluginBridge } from './server.js'
 import { QueueError } from '../utils/errors.js'
 import { logger, sanitizeBoundedText } from '../utils/logger.js'
 
-export function registerApi(app: FastifyInstance, gateway: Gateway): void {
+export function registerApi(
+  app: FastifyInstance,
+  gateway: Gateway,
+  plugins?: WebPluginBridge,
+): void {
   const config = gateway.config
 
   // GET /api/status
@@ -30,6 +35,11 @@ export function registerApi(app: FastifyInstance, gateway: Gateway): void {
   // GET /api/tasks
   app.get('/api/tasks', async () => {
     return gateway.getSkillSummaries()
+  })
+
+  // GET /api/plugins
+  app.get('/api/plugins', async () => {
+    return plugins ? plugins.host.getStatus() : []
   })
 
   // GET /api/config

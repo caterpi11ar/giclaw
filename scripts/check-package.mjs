@@ -1,8 +1,21 @@
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import process from 'node:process'
+
+/**
+ * Subpaths a third-party plugin can import, mirroring openclaw's
+ * `openclaw/plugin-sdk/*` names for the parts Giclaw implements.
+ */
+const REQUIRED_EXPORT_SUBPATHS = [
+  './plugin-sdk',
+  './plugin-sdk/channel-ingress-runtime',
+  './plugin-sdk/channel-plugin-common',
+  './plugin-sdk/config-contracts',
+  './plugin-sdk/plugin-entry',
+  './plugin-sdk/types',
+]
 
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 const cacheDirectory = mkdtempSync(join(tmpdir(), 'giclaw-package-check-'))
@@ -24,7 +37,7 @@ try {
   const files = reports[0].files
   const paths = new Set(files.map(file => file.path))
   const violations = []
-  const allowedRootFiles = new Set(['README.md', 'package.json'])
+  const allowedRootFiles = new Set(['README.md', 'THIRD_PARTY_NOTICES.md', 'package.json'])
   const runtimeSegments = new Set([
     '.giclaw',
     'data',
@@ -50,7 +63,12 @@ try {
   }
 
   for (const required of [
+    'THIRD_PARTY_NOTICES.md',
     'dist/cli.js',
+    'dist/extensions/feishu/giclaw.plugin.json',
+    'dist/extensions/imap/giclaw.plugin.json',
+    'dist/extensions/smtp/giclaw.plugin.json',
+    'dist/extensions/webhook/giclaw.plugin.json',
     'dist/web/public/index.html',
     'dist/web/public/app.js',
     'dist/web/public/app.css',
@@ -67,6 +85,27 @@ try {
   const cli = files.find(file => file.path === 'dist/cli.js')
   if (!cli || (Number(cli.mode) & 0o111) === 0)
     violations.push('dist/cli.js: package executable bit is missing')
+
+  const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
+  const exportMap = manifest.exports ?? {}
+  for (const subpath of REQUIRED_EXPORT_SUBPATHS) {
+    if (!(subpath in exportMap))
+      violations.push(`exports["${subpath}"]: SDK subpath is missing`)
+  }
+  for (const [subpath, value] of Object.entries(exportMap)) {
+    const conditions = typeof value === 'string' ? { default: value } : value
+    const targets = Object.entries(conditions)
+    if (targets.length === 0)
+      violations.push(`exports["${subpath}"]: declares no target`)
+    for (const [condition, target] of targets) {
+      if (typeof target !== 'string' || !target.startsWith('./')) {
+        violations.push(`exports["${subpath}"]["${condition}"]: target must be a relative path`)
+        continue
+      }
+      if (!paths.has(target.slice(2)))
+        violations.push(`exports["${subpath}"]["${condition}"]: ${target} is not in the package`)
+    }
+  }
 
   if (violations.length > 0)
     throw new Error(`Package smoke check failed:\n${violations.join('\n')}`)
