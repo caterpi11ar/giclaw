@@ -15,3 +15,5 @@ docs/node_modules/
 docs/build/
 docs/.docusaurus/
 midscene_run/
+
+reports/

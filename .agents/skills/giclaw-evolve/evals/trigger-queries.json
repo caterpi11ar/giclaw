@@ -1,0 +1,23 @@
+[
+  { "query": "giclaw 的 claim-mail 最近老在点邮箱图标那步失败，帮我看看 transcript 然后改改 SKILL.md", "should_trigger": true },
+  { "query": "想让 giclaw 能自己修自己的技能，跑失败了就自动诊断、改文件、再跑一遍，最后自己决定留不留", "should_trigger": true },
+  { "query": "给 giclaw 加一个 evolve 命令，能循环迭代直到技能通过或者预算用完", "should_trigger": true },
+  { "query": "我把 battle-pass-claim 的 SKILL.md 调了一下，想先试试新版本，别动仓库里已验收的那份", "should_trigger": true },
+  { "query": "怎么安全地回滚一个改坏了的 giclaw skill？我想先快照再改", "should_trigger": true },
+  { "query": "giclaw 里那个 aiWaitFor 的步骤超时了，帮我看失败截图和逐步日志，定位是哪个 step", "should_trigger": true },
+  { "query": "implement the self-improvement loop for our game agent: observe failures, patch the SKILL.md, re-run, keep or roll back", "should_trigger": true },
+  { "query": "我们想把某个跳过验收的 giclaw 技能停用，先从候选测试开始，通过了再合并", "should_trigger": true },
+  { "query": "giclaw run 报 Step 14/20 (aiAct) failed，帮我按进化循环走一遍并给出最小修复", "should_trigger": true },
+  { "query": "the 探索派遣 skill keeps misclicking after the update — can you diagnose it and test a candidate safely?", "should_trigger": true },
+
+  { "query": "帮我从零写一个新的 giclaw 技能，功能是每天自动收菜", "should_trigger": false },
+  { "query": "giclaw 的 skills/README 里那个技能表格格式怎么写的？", "should_trigger": false },
+  { "query": "用 Playwright 帮我自动化测试一个普通网站的下单流程", "should_trigger": false },
+  { "query": "git 里我怎么把一个 commit 回滚掉？", "should_trigger": false },
+  { "query": "解释一下 giclaw 的 dependsOn 依赖是怎么展开的", "should_trigger": false },
+  { "query": "帮我给这个 TypeScript 项目写单元测试，覆盖率要到 99%", "should_trigger": false },
+  { "query": "我想让我的 AI agent 有记忆、能自我反思，用 LangGraph 怎么搭", "should_trigger": false },
+  { "query": "giclaw 的 config.json 里 notifications 怎么配飞书机器人", "should_trigger": false },
+  { "query": "帮我抓取某个网页上的价格数据并导出 CSV", "should_trigger": false },
+  { "query": "把这个已有的 SKILL.md 翻译成英文", "should_trigger": false }
+]
