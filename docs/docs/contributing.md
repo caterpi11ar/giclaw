@@ -53,6 +53,12 @@ pnpm build
 # 检查实际发布文件清单
 pnpm test:package
 
+# 可选：真实飞书连接器 e2e（需要真实凭证）
+pnpm test:feishu
+
+# 进化 dry-run（需已配置模型与一次真实运行记录）
+pnpm start evolve --skill claim-achievements --dry-run
+
 # 从构建产物运行
 pnpm start
 ```
@@ -60,6 +66,14 @@ pnpm start
 `pnpm test:coverage` 会覆盖配置、技能加载、步骤解析与执行、模型流式响应、登录与浏览器会话、取消与超时、队列、Gateway、HTTP/WebSocket、CLI、持久化和 TUI。门禁要求全局行、语句、函数和分支均不低于 99.8%，且每个存在可执行指标的源文件各项不低于 98%。纯类型声明不计入覆盖率。覆盖率是防回退信号，不代表视觉模型、真实账号、浏览器 UI、静态页面或技能提示已经被完整证明。
 
 Pull Request 和 `main` 分支推送会在 GitHub Actions 自动运行 high / critical 依赖漏洞审计、运行数据与疑似凭据扫描、代码规范、类型检查、覆盖率测试、固定 seed 乱序测试、干净应用构建、发布包 smoke、文档类型检查和文档构建。自动化测试不会读取真实账号 Cookie、调用真实模型或启动真实游戏流程；涉及游戏界面、账号状态、模型表现或网络兼容性的变化仍需单独做真实环境验收。
+
+改动 CLI、配置、技能行为或进化系统时，同步更新对应文档：
+
+- CLI / 配置：`docs/docs/cli.md`、`docs/docs/configuration.md`
+- 技能格式 / 共享上下文：`docs/docs/skills/writing-skills.md`、`docs/docs/skills/context-skills.md`
+- 自我迭代：`docs/docs/evolution.md`
+- 行为与能力状态：`docs/docs/changelog.md`、`docs/docs/roadmap.md`、首页 `docs/src/pages/index.tsx`
+- 合并前至少运行 `pnpm --dir docs build`，检查断链与页面编译。
 
 :::note
 `pnpm dev` 通过 `tsx` 直接运行 TypeScript 源码，不会自动监听文件变化。`pnpm build` 产出 `dist/`，通过 `pnpm start` 或全局 `giclaw` 命令运行。
