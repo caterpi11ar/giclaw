@@ -78,12 +78,12 @@ describe('loginFlow', () => {
     expect(session.launch).toHaveBeenCalledWith({ headless: true })
     expect(context.addCookies).toHaveBeenCalledWith(cookies)
     expect(restore.reload).toHaveBeenCalledOnce()
-    expect(restore.waitFor).toHaveBeenCalledWith({ timeout: 15000 })
+    expect(restore.waitFor).toHaveBeenCalledWith({ timeout: 60000 })
     expect(session.close).not.toHaveBeenCalled()
     expect(cookieMocks.saveCookies).not.toHaveBeenCalled()
   })
 
-  it('deletes expired cookies and completes a visible manual login', async () => {
+  it('keeps cookies when restore fails and completes a visible manual login', async () => {
     const restore = mockPage()
     restore.waitFor.mockRejectedValue(selectorTimeout('not logged in'))
     const manual = mockPage()
@@ -99,7 +99,7 @@ describe('loginFlow', () => {
 
     await loginFlow(session as unknown as SessionManager, config)
 
-    expect(cookieMocks.deleteCookies).toHaveBeenCalledWith('/tmp/cookies.json')
+    expect(cookieMocks.deleteCookies).not.toHaveBeenCalled()
     expect(session.close).toHaveBeenCalledOnce()
     expect(session.launch).toHaveBeenNthCalledWith(2, { headless: false })
     expect(cookieMocks.saveCookies).toHaveBeenCalledWith('/tmp/cookies.json', [{ name: 'new', value: 'value' }])
@@ -128,7 +128,7 @@ describe('loginFlow', () => {
     expect(session.relaunch).toHaveBeenCalledWith({ headless: true })
     expect(headlessContext.addCookies).toHaveBeenCalledWith(fresh)
     expect(headless.reload).toHaveBeenCalledOnce()
-    expect(headless.waitFor).toHaveBeenCalledWith({ timeout: 15000 })
+    expect(headless.waitFor).toHaveBeenCalledWith({ timeout: 60000 })
   })
 
   it('propagates a cancellation signal through the visible and headless launches', async () => {
