@@ -37,6 +37,12 @@ export interface SkillDefinition {
   name: string
   description: string
   enabled: boolean
+  /** Context skills only contribute Background / Known Issues; they never run. */
+  context?: boolean
+  /** Context skill tags (empty = core). */
+  tags?: string[]
+  /** Runnable skill: context tags to inject (core is always injected). */
+  contexts?: string[]
   timeoutMs: number
   retries: number
   dependsOn: string[]

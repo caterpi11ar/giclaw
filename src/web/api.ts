@@ -2,6 +2,9 @@ import type { FastifyInstance } from 'fastify'
 import type { Gateway } from '../gateway/gateway.js'
 import type { TaskDefinition } from '../tasks/base-task.js'
 import type { WebPluginBridge } from './server.js'
+import { join } from 'node:path'
+import { PATHS } from '../config/paths.js'
+import { EvolveStore } from '../evolve/store.js'
 import { QueueError } from '../utils/errors.js'
 import { logger, sanitizeBoundedText } from '../utils/logger.js'
 
@@ -9,8 +12,13 @@ export function registerApi(
   app: FastifyInstance,
   gateway: Gateway,
   plugins?: WebPluginBridge,
+  evolveStore?: EvolveStore,
 ): void {
   const config = gateway.config
+  const evolve = evolveStore ?? new EvolveStore({
+    evolveDir: join(PATHS.stateDir, 'evolve'),
+    overrideSkillsDir: PATHS.skillsDir,
+  })
 
   // GET /api/status
   app.get('/api/status', async () => {
@@ -61,6 +69,25 @@ export function registerApi(
       return reply.status(400).send({ error: 'limit must be a positive integer' })
     }
     return gateway.getRunHistory(limit)
+  })
+
+  // GET /api/evolve — read-only self-iteration status
+  app.get('/api/evolve', async () => {
+    const [bestKnownGood, pending, generations] = await Promise.all([
+      evolve.listBestKnownGood(),
+      evolve.listPending(),
+      evolve.listGenerations(),
+    ])
+    return { bestKnownGood, pending, generations: generations.slice(0, 20) }
+  })
+
+  // GET /api/evolve/:genId — one generation record
+  app.get('/api/evolve/:genId', async (request, reply) => {
+    const { genId } = request.params as { genId: string }
+    const record = await evolve.readGeneration(genId)
+    if (!record)
+      return reply.status(404).send({ error: 'Unknown generation' })
+    return record
   })
 
   // POST /api/run

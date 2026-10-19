@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
@@ -111,5 +111,52 @@ describe('gateway skill catalog', () => {
       .rejects
       .toThrow('Invalid routine "broken": plain routine failure')
     expect(resolveTasks).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('gateway skill reload', () => {
+  it('reloads skill definitions from disk and exposes them individually', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'giclaw-reload-'))
+    const config = appConfigSchema.parse({
+      tasks: { enabled: ['demo'], skillsDirs: [dir], routines: {} },
+    })
+    const skillDir = join(dir, 'demo')
+    await mkdir(skillDir, { recursive: true })
+    const file = join(skillDir, 'SKILL.md')
+    await writeFile(file, '---\nid: demo\nname: Demo\ndescription: demo\n---\n\n## Steps\n- keyPress: Escape\n')
+    try {
+      const gateway = new Gateway(config)
+      await gateway.init()
+      expect(gateway.getSkillDefinition('demo')?.steps).toHaveLength(1)
+      expect(gateway.getSkillDefinition('missing')).toBeUndefined()
+
+      await writeFile(file, '---\nid: demo\nname: Demo\ndescription: demo\n---\n\n## Steps\n- keyPress: Escape\n- wait: 1s\n')
+      await gateway.reloadSkills()
+
+      expect(gateway.getSkillDefinition('demo')?.steps).toHaveLength(2)
+      expect(gateway.getTaskRunner().getEnabledTasks(['demo']).map(task => task.id)).toEqual(['demo'])
+    }
+    finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects reloading when no skills remain', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'giclaw-reload-empty-'))
+    const config = appConfigSchema.parse({
+      tasks: { enabled: ['demo'], skillsDirs: [dir], routines: {} },
+    })
+    const skillDir = join(dir, 'demo')
+    await mkdir(skillDir, { recursive: true })
+    await writeFile(join(skillDir, 'SKILL.md'), '---\nid: demo\nname: Demo\ndescription: demo\n---\n\n## Steps\n- keyPress: Escape\n')
+    try {
+      const gateway = new Gateway(config)
+      await gateway.init()
+      await rm(skillDir, { recursive: true, force: true })
+      await expect(gateway.reloadSkills()).rejects.toThrow(`No skills found in: ${dir}`)
+    }
+    finally {
+      await rm(dir, { recursive: true, force: true })
+    }
   })
 })

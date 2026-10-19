@@ -93,3 +93,10 @@ export class QueueError extends AppError {
     this.name = 'QueueError'
   }
 }
+
+export class EvolveError extends AppError {
+  constructor(message: string, cause?: unknown) {
+    super(message, 'EVOLVE_ERROR', cause)
+    this.name = 'EvolveError'
+  }
+}

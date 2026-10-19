@@ -67,6 +67,26 @@ program
   })
 
 program
+  .command('evolve')
+  .description('Self-iteration loop: diagnose a failing skill, propose a minimal SKILL.md patch, re-run, keep or roll back')
+  .option('--skill <id>', 'skill to evolve / accept / reject')
+  .option('--status', 'show best-known-good, pending approvals, and recent generations')
+  .option('--show <genId>', 'print one generation record as JSON')
+  .option('--accept', 'accept the pending candidate for --skill')
+  .option('--reject', 'reject the pending candidate for --skill and restore the previous state')
+  .option('--apply', 'with --accept, copy the candidate into the committed skills directory')
+  .option('--target-dir <dir>', 'directory to apply into (default: ./skills, else ~/.giclaw/skills)')
+  .option('--max-generations <n>', 'override evolve.maxGenerations')
+  .option('--max-minutes <n>', 'override evolve.maxWallClockMs')
+  .option('--no-require-approval', 'auto-accept a passing candidate without human confirmation')
+  .option('--dry-run', 'diagnose + propose + validate only; no browser run')
+  .action(async (evolveOpts: Record<string, unknown>) => {
+    const opts = program.opts()
+    const { runEvolveCommand } = await import('./evolve/command.js')
+    await runEvolveCommand(opts, evolveOpts)
+  })
+
+program
   .command('init')
   .description('Initialize ~/.giclaw/ with interactive setup')
   .option('--non-interactive', 'skip interactive prompts, create defaults only')

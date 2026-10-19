@@ -20,7 +20,9 @@ export class SkillRegistry {
   }
 
   toTaskDefinitions(): TaskDefinition[] {
+    // Context skills only enrich AI context; they are not runnable tasks.
     return this.skills
+      .filter(skill => !skill.context)
       .map(skill => ({
         id: skill.id,
         name: skill.name,
