@@ -4,7 +4,7 @@ import { themes as prismThemes } from 'prism-react-renderer'
 
 const config: Config = {
   title: 'giclaw',
-  tagline: '专为《原神》云游戏打造的视觉 AI 奖励领取代理',
+  tagline: '视觉 AI + 可审计技能 + 自我迭代的《原神》云游戏奖励代理',
   favicon: 'img/favicon.ico',
 
   future: {
@@ -59,6 +59,11 @@ const config: Config = {
           label: '文档',
         },
         {
+          to: '/docs/evolution',
+          label: '自我迭代',
+          position: 'left',
+        },
+        {
           to: '/docs/changelog',
           label: '更新日志',
           position: 'left',
@@ -83,6 +88,14 @@ const config: Config = {
             {
               label: '技能系统',
               to: '/docs/skills/overview',
+            },
+            {
+              label: '上下文技能',
+              to: '/docs/skills/context-skills',
+            },
+            {
+              label: '自我迭代',
+              to: '/docs/evolution',
             },
             {
               label: '更新日志',
