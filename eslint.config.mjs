@@ -1,7 +1,7 @@
 import antfu from '@antfu/eslint-config'
 
 export default antfu({
-  ignores: ['node_modules', 'dist', '**/*.md'],
+  ignores: ['node_modules', 'dist', '**/*.md', '.agents', 'reports', 'skills-lock.json'],
   rules: {
     'no-console': 'off',
     'eslint-comments/no-duplicate-disable': 'off',

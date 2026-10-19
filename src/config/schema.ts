@@ -73,6 +73,26 @@ export const appConfigSchema = z.object({
     })
     .default({}),
 
+  /**
+   * Self-iteration (`giclaw evolve`) settings. Disabled by default, matching the
+   * plugin system: nothing runs, no model call is made and no skill is rewritten
+   * unless the operator opts in.
+   */
+  evolve: z
+    .object({
+      enabled: z.boolean().default(false),
+      maxGenerations: z.number().int().positive().max(20).default(3),
+      maxWallClockMs: z.number().int().positive().max(3_600_000).default(1_800_000),
+      maxModelCalls: z.number().int().positive().max(100).default(10),
+      regressionFactor: z.number().min(1).max(5).default(1.5),
+      requireApproval: z.boolean().default(true),
+      maxPatchLines: z.number().int().positive().max(200).default(40),
+      modelTimeoutMs: z.number().int().positive().max(600_000).default(120_000),
+      /** Empty means every skill is eligible. */
+      allowedSkills: z.array(z.string().min(1).max(100)).max(200).default([]),
+    })
+    .default({}),
+
   tasks: z
     .object({
       enabled: z.array(z.string().min(1)).min(1).max(100).default([

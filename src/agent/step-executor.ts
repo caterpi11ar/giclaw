@@ -239,6 +239,31 @@ function isPageClosed(page: Page): boolean {
   }
 }
 
+/** Best-effort failure screenshot; never lets capture problems mask the original error. */
+async function captureFailureScreenshot(
+  page: Page,
+  screenshotDir: string | undefined,
+  label: string,
+): Promise<string | undefined> {
+  if (!screenshotDir || isPageClosed(page))
+    return undefined
+  const pending = saveScreenshot(page, screenshotDir, label).catch((error) => {
+    logger.warn('Could not capture failure screenshot', error)
+    return undefined
+  })
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const deadline = new Promise<undefined>((resolve) => {
+    timer = setTimeout(resolve, 5_000, undefined)
+  })
+  try {
+    return await Promise.race([pending, deadline])
+  }
+  finally {
+    if (timer)
+      clearTimeout(timer)
+  }
+}
+
 function buildAIContext(ctx: StepContext): string | undefined {
   const sections: string[] = []
   if (ctx.background)
@@ -427,11 +452,9 @@ export async function executeSteps(ctx: StepContext): Promise<AgentResult> {
               (error) => {
                 if (!agentController.signal.aborted)
                   agentController.abort(error)
-                // A visual deadline is fatal for this page: stop any further
-                // browser side effects immediately. TaskRunner repeats and
-                // verifies page closure while awaiting the attached Midscene
-                // operation under its cleanup deadline.
-                void page.close({ runBeforeUnload: false }).catch(() => {})
+                // Keep the page open long enough for the failure screenshot in
+                // the catch block; TaskRunner still closes it during cleanup
+                // once the attached Midscene operation settles.
               },
               `skill:${skillId}:step:${i + 1}:aiWaitFor`,
             )
@@ -525,35 +548,14 @@ export async function executeSteps(ctx: StepContext): Promise<AgentResult> {
         const error = err instanceof Error ? err : new Error(String(err))
         logger.error(`Step ${i + 1} failed: ${error.message}`)
 
-        if (error instanceof TimeoutError) {
-          await appendTranscriptSafely(transcript, {
-            step: i + 1,
-            timestamp: new Date().toISOString(),
-            method: step.method,
-            prompt: step.prompt,
-            result: 'error',
-            errorMessage: error.message,
-          })
-          // Preserve the original TimeoutError and its pending-operation
-          // cleanup contract for TaskRunner. The deadline has already closed
-          // the page, so a second diagnostic screenshot would only obscure the
-          // actual timeout with a "page closed" error.
-          throw error
-        }
-
-        let failureScreenshot: string | undefined
-        if (screenshotDir && !isPageClosed(page)) {
-          try {
-            failureScreenshot = await saveScreenshot(
-              page,
-              screenshotDir,
-              `${safeLabel(skillId)}-step-${i + 1}-failure`,
-            )
-          }
-          catch (screenshotError) {
-            logger.warn('Could not capture failure screenshot', screenshotError)
-          }
-        }
+        // Capture the failure现场 for every error, including timeouts, before
+        // TaskRunner closes the page. This is the screenshot-driven evidence
+        // operators rely on to diagnose a failed run.
+        const failureScreenshot = await captureFailureScreenshot(
+          page,
+          screenshotDir,
+          `${safeLabel(skillId)}-step-${i + 1}-failure`,
+        )
 
         await appendTranscriptSafely(transcript, {
           step: i + 1,
@@ -564,6 +566,12 @@ export async function executeSteps(ctx: StepContext): Promise<AgentResult> {
           errorMessage: error.message,
           screenshotPath: failureScreenshot,
         })
+
+        if (error instanceof TimeoutError) {
+          // Preserve the original TimeoutError and its pending-operation
+          // cleanup contract for TaskRunner.
+          throw error
+        }
 
         throw new StepExecutionError(
           `Step ${i + 1}/${steps.length} (${step.method}) failed: ${error.message}`,

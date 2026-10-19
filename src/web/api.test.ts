@@ -1,8 +1,12 @@
 import type { Gateway } from '../gateway/gateway.js'
 import type { TaskDefinition } from '../tasks/base-task.js'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import Fastify from 'fastify'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { appConfigSchema } from '../config/schema.js'
+import { EvolveStore } from '../evolve/store.js'
 import { QueueError } from '../utils/errors.js'
 import { logger } from '../utils/logger.js'
 import { registerApi } from './api.js'
@@ -58,13 +62,13 @@ describe('hTTP API', () => {
     await Promise.all(apps.splice(0).map(app => app.close()))
   })
 
-  async function app(plugins?: Parameters<typeof registerApi>[2]) {
+  async function app(
+    plugins?: Parameters<typeof registerApi>[2],
+    evolveStore?: Parameters<typeof registerApi>[3],
+  ) {
     const instance = Fastify()
     apps.push(instance)
-    if (plugins)
-      registerApi(instance, gateway as unknown as Gateway, plugins)
-    else
-      registerApi(instance, gateway as unknown as Gateway)
+    registerApi(instance, gateway as unknown as Gateway, plugins, evolveStore)
     await instance.ready()
     return instance
   }
@@ -116,6 +120,51 @@ describe('hTTP API', () => {
     const config = await instance.inject({ method: 'GET', url: '/api/config' })
     expect(config.json().model.apiKey).toBe('***')
     expect(gateway.config.model.apiKey).toBe('secret-token')
+  })
+
+  it('exposes read-only evolution status and 404s unknown generations', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'evolve-api-'))
+    try {
+      const store = new EvolveStore({
+        evolveDir: join(root, 'evolve'),
+        overrideSkillsDir: join(root, 'skills'),
+      })
+      await store.writeGeneration({
+        genId: 'demo-1',
+        skillId: 'demo',
+        parentGenId: null,
+        startedAt: '2026-08-07T00:00:00.000Z',
+        completedAt: '2026-08-07T00:01:00.000Z',
+        status: 'pending-approval',
+        trigger: 'manual',
+      })
+      await store.setBestKnownGood({ skillId: 'demo', genId: 'demo-1', acceptedAt: 't', candidateFile: 'f' })
+      await store.writePending({
+        genId: 'demo-1',
+        skillId: 'demo',
+        candidateFile: 'f',
+        createdAt: 't',
+        originalOverride: null,
+      })
+
+      const instance = await app(undefined, store)
+      const list = await instance.inject({ method: 'GET', url: '/api/evolve' })
+      expect(list.statusCode).toBe(200)
+      expect(list.json().bestKnownGood).toHaveLength(1)
+      expect(list.json().pending).toHaveLength(1)
+      expect(list.json().generations[0].genId).toBe('demo-1')
+
+      const one = await instance.inject({ method: 'GET', url: '/api/evolve/demo-1' })
+      expect(one.statusCode).toBe(200)
+      expect(one.json().status).toBe('pending-approval')
+
+      const missing = await instance.inject({ method: 'GET', url: '/api/evolve/nope' })
+      expect(missing.statusCode).toBe(404)
+      expect(missing.json()).toEqual({ error: 'Unknown generation' })
+    }
+    finally {
+      await rm(root, { recursive: true, force: true })
+    }
   })
 
   it('returns empty status history and preserves an empty model key', async () => {

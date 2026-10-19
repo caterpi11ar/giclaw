@@ -3,9 +3,9 @@ import type { AppConfig } from '../config/schema.js'
 import type { SessionManager } from './session-manager.js'
 import { cancellationError, LoginError } from '../utils/errors.js'
 import { logger } from '../utils/logger.js'
-import { deleteCookies, loadCookies, saveCookies } from './cookie-store.js'
+import { loadCookies, saveCookies } from './cookie-store.js'
 
-const COOKIE_RESTORE_CHECK_TIMEOUT_MS = 15_000
+const COOKIE_RESTORE_CHECK_TIMEOUT_MS = 60_000
 
 function throwIfCancelled(signal: AbortSignal | undefined): void {
   if (signal?.aborted)
@@ -122,9 +122,10 @@ export async function loginFlow(
       return
     }
 
-    // Cookies expired
-    logger.info('Cookies expired, deleting cookie file')
-    await abortable(() => deleteCookies(cookiePath), signal)
+    // Keep the cookies: a slow cloud-game page can look like an expired
+    // session, and deleting them forces a manual login on every transient
+    // failure. The manual login below overwrites them on success.
+    logger.info('Cookie restore failed; keeping cookies and falling back to manual login')
     await session.close()
     throwIfCancelled(signal)
   }

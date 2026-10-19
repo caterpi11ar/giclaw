@@ -7,6 +7,7 @@ timeoutMs: 300000
 retries: 0
 dependsOn:
   - welkin-moon
+contexts: [ui, reward]
 ---
 
 ## Background
@@ -22,6 +23,7 @@ dependsOn:
 - aiWaitFor: 邮箱界面已打开，顶部显示「邮箱」标题和邮件数量
 - aiAssert: 当前明确是游戏内邮箱界面，顶部可见「邮箱」标题；不是云游戏平台面板、名片选择界面或拍照模式，否则停止且不要领取
 - aiAct: 查看底部「全部领取」按钮。如果可点击（绿色），点击它领取所有邮件附件；如果不可点击（灰色）或邮件列表为空，不做操作
+- screenshot: mail-claimed
 - aiAct: 如果弹出物品展示窗口，点击空白处关闭
 - keyPress: Escape
 - wait: 1s

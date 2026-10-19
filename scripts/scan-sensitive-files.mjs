@@ -59,7 +59,7 @@ function runtimePathRules(filePath) {
 
   if (segments.some(segment => RUNTIME_DIRECTORIES.has(segment)))
     violations.push('runtime-directory')
-  if (basename === 'config.json' || /^giclaw(?:[._-].+)?\.json$/.test(basename))
+  if (basename === 'config.json' || (/^giclaw(?:[._-].+)?\.json$/.test(basename) && !basename.endsWith('.plugin.json')))
     violations.push('runtime-config')
   if (/^(?:cookies?|session|storage-state|auth-state)(?:[._-].*)?\.json$/.test(basename))
     violations.push('browser-session')

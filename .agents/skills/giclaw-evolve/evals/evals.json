@@ -1,0 +1,23 @@
+{
+  "skill_name": "giclaw-evolve",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "giclaw 的 welkin-moon 昨天还好好的，今天更新后一跑到等待登录大门那步就超时失败，帮我定位并修好，别把仓库弄乱。",
+      "expected_output": "Snapshots the active welkin-moon SKILL.md, reads the latest transcript + failure screenshot, identifies the failing step/method, proposes a minimal SKILL.md patch, validates it with the real loader (candidate.sh), runs it in the visible browser, and only promotes on success. The committed skills/ file is not modified before promote.sh, and a rollback path exists.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "我们要给 giclaw 加一个自我迭代的 loop 进化系统，能自己发现失败的技能、改 SKILL.md、再跑验证然后决定保留还是回滚。先给个能边写边跑的最小实现。",
+      "expected_output": "Follows the vertical-slice plan: gets Slice 0/1 (evidence + snapshot/candidate/loop/promote/rollback harness) running first, then implements the src/evolve slice (types/diagnose/patch/policy + loader validation) with unit tests, reusing Gateway.runOnce and loadSkills. Each slice is runnable before moving on.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "我改了一版 expedition-collect 的 SKILL.md，想先在真实环境里试一下，但又怕把已经验收的版本覆盖掉，怎么安全验证？",
+      "expected_output": "Installs the modified file as a candidate override via candidate.sh (validated + archived + snapshot), runs it with loop.sh/run-skill.sh, and rolls back with rollback.sh if it regresses. Explains that the committed skills/ file is untouched until promote.sh.",
+      "files": []
+    }
+  ]
+}

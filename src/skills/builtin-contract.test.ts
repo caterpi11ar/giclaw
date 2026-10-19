@@ -9,7 +9,8 @@ import { STEP_METHODS } from './types.js'
 describe('built-in skill contracts', () => {
   it('loads the exact catalog with verified defaults and dependencies', async () => {
     const skills = await loadSkills([resolve('skills')])
-    const catalog = Object.fromEntries(skills.map(skill => [skill.id, {
+    const runnable = skills.filter(skill => !skill.context)
+    const catalog = Object.fromEntries(runnable.map(skill => [skill.id, {
       enabled: skill.enabled,
       retries: skill.retries,
       dependsOn: skill.dependsOn,
@@ -17,29 +18,75 @@ describe('built-in skill contracts', () => {
     }]))
 
     expect(catalog).toEqual({
-      'battle-pass-claim': { enabled: true, retries: 0, dependsOn: ['welkin-moon'], steps: 8 },
-      'claim-achievements': { enabled: true, retries: 0, dependsOn: ['welkin-moon'], steps: 8 },
-      'claim-event-rewards': { enabled: true, retries: 0, dependsOn: ['welkin-moon'], steps: 7 },
-      'claim-mail': { enabled: true, retries: 0, dependsOn: ['welkin-moon'], steps: 12 },
+      'battle-pass-claim': { enabled: true, retries: 0, dependsOn: ['welkin-moon'], steps: 9 },
+      'claim-achievements': { enabled: true, retries: 0, dependsOn: ['welkin-moon'], steps: 9 },
+      'claim-event-rewards': { enabled: true, retries: 0, dependsOn: ['welkin-moon'], steps: 8 },
+      'claim-mail': { enabled: true, retries: 0, dependsOn: ['welkin-moon'], steps: 13 },
       'expedition-collect': { enabled: false, retries: 0, dependsOn: ['welkin-moon'], steps: 35 },
-      'welkin-moon': { enabled: true, retries: 0, dependsOn: [], steps: 20 },
+      'welkin-moon': { enabled: true, retries: 0, dependsOn: [], steps: 21 },
     })
     expect(Object.values(catalog).every(item => item.steps > 0)).toBe(true)
     expect(skills.flatMap(skill => skill.steps).every(step => STEP_METHODS.includes(step.method))).toBe(true)
+
+    const contextIds = skills.filter(skill => skill.context).map(skill => skill.id).sort()
+    expect(contextIds).toEqual([
+      'genshin-automation-pitfalls',
+      'genshin-basics',
+      'genshin-characters',
+      'genshin-cloud',
+      'genshin-combat',
+      'genshin-events',
+      'genshin-gear',
+      'genshin-interaction-safety',
+      'genshin-map',
+      'genshin-navigation',
+      'genshin-progression',
+      'genshin-quests',
+      'genshin-rewards',
+      'genshin-shop',
+      'genshin-social',
+      'genshin-ui',
+    ])
+    expect(skills.filter(skill => skill.context).every(skill => skill.steps.length === 0)).toBe(true)
+  })
+
+  it('scopes context injection by tag', async () => {
+    const skills = await loadSkills([resolve('skills')])
+    const welkin = skills.find(skill => skill.id === 'welkin-moon')!
+    const mail = skills.find(skill => skill.id === 'claim-mail')!
+    // welkin-moon asks for `ui`, not `reward`.
+    expect(welkin.background).not.toContain('原神可领取奖励的入口与语义')
+    expect(mail.background).toContain('原神可领取奖励的入口与语义')
+    // `core` is always injected.
+    expect(welkin.background).toContain('原神（Genshin Impact）')
+  })
+
+  it('injects context skills into runnable skills and never runs them', async () => {
+    const skills = await loadSkills([resolve('skills')])
+    const mail = skills.find(skill => skill.id === 'claim-mail')!
+    expect(mail.background).toContain('原神（Genshin Impact）')
+    expect(mail.background).toContain('原神 HUD 与菜单布局')
+    expect(mail.knownIssues?.join('\n')).toContain('云游戏画面可能处于加载')
+
+    const registry = new SkillRegistry()
+    await registry.loadFromDirs([resolve('skills')])
+    const taskIds = registry.toTaskDefinitions().map(task => task.id)
+    expect(taskIds).toContain('claim-mail')
+    expect(taskIds).not.toContain('genshin-basics')
   })
 
   it('locks the reviewed operation order for every built-in skill', async () => {
     const skills = await loadSkills([resolve('skills')])
-    const methods = Object.fromEntries(skills.map(skill => [
+    const methods = Object.fromEntries(skills.filter(skill => !skill.context).map(skill => [
       skill.id,
       skill.steps.map(step => step.method),
     ]))
 
     expect(methods).toEqual({
-      'battle-pass-claim': ['keyPress', 'aiWaitFor', 'aiTap', 'aiWaitFor', 'aiAct', 'aiAct', 'keyPress', 'aiWaitFor'],
-      'claim-achievements': ['keyPress', 'aiWaitFor', 'aiTap', 'aiWaitFor', 'aiAct', 'aiAct', 'keyPress', 'aiAct'],
-      'claim-event-rewards': ['keyPress', 'aiAct', 'aiWaitFor', 'aiAct', 'aiAct', 'keyPress', 'aiAct'],
-      'claim-mail': ['keyPress', 'aiWaitFor', 'aiTap', 'aiAct', 'aiWaitFor', 'aiAssert', 'aiAct', 'aiAct', 'keyPress', 'wait', 'keyPress', 'aiWaitFor'],
+      'battle-pass-claim': ['keyPress', 'aiWaitFor', 'aiTap', 'aiWaitFor', 'aiAct', 'screenshot', 'aiAct', 'keyPress', 'aiWaitFor'],
+      'claim-achievements': ['keyPress', 'aiWaitFor', 'aiTap', 'aiWaitFor', 'aiAct', 'screenshot', 'aiAct', 'keyPress', 'aiAct'],
+      'claim-event-rewards': ['keyPress', 'aiAct', 'aiWaitFor', 'aiAct', 'screenshot', 'aiAct', 'keyPress', 'aiAct'],
+      'claim-mail': ['keyPress', 'aiWaitFor', 'aiTap', 'aiAct', 'aiWaitFor', 'aiAssert', 'aiAct', 'screenshot', 'aiAct', 'keyPress', 'wait', 'keyPress', 'aiWaitFor'],
       'expedition-collect': [
         'keyPress',
         'aiWaitFor',
@@ -97,6 +144,7 @@ describe('built-in skill contracts', () => {
         'aiWaitFor',
         'aiAct',
         'aiAct',
+        'screenshot',
         'aiAct',
       ],
     })

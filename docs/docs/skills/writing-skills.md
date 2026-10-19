@@ -37,7 +37,7 @@ dependsOn:
 - 云游戏平台侧边栏不是游戏 UI，不要点击屏幕最左侧边缘。
 ```
 
-`Background`、`Goal` 和 `Known Issues` 会作为 Midscene 的 `aiActionContext` 注入所有视觉 AI 步骤，不只是保存为元数据。
+`Background`、`Goal` 和 `Known Issues` 会作为 Midscene 的 `aiActionContext` 注入所有视觉 AI 步骤，不只是保存为元数据；其中 `Background` 与 `Known Issues` 还会先叠加所有**上下文技能**（`context: true`）的内容——这是共享游戏知识（原神 UI 约定、云游戏页面、奖励语义、安全边界）的注入方式。上下文技能不会作为任务运行，也不需要 `## Steps`。
 
 ## Frontmatter
 
@@ -47,6 +47,9 @@ dependsOn:
 | `name` | 必填 | 显示名 |
 | `description` | 必填 | 日志/API 简述 |
 | `enabled` | `true` | 目录中的默认推荐状态；显式配置或 routine 仍可选择 `false` 技能 |
+| `context` | `false` | 设为 `true` 表示「上下文技能」：不执行，只把 Background / Known Issues 注入可运行技能 |
+| `tags` | `[]` | 仅上下文技能：归属标签；`core` 始终注入，空表示 `core` |
+| `contexts` | `[]` | 仅可运行技能：要注入的上下文标签（`core` 总是包含） |
 | `timeoutMs` | `600000` | 每次尝试的超时 |
 | `retries` | `0` | 目前固定为 `0`；部分执行后的 UI 状态不可靠，禁止自动从头重放 |
 | `dependsOn` | `[]` | 前置技能 ID；运行时自动递归加入、去重和拓扑排序 |

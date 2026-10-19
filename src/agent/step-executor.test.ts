@@ -436,8 +436,8 @@ describe('executeSteps', () => {
     await vi.advanceTimersByTimeAsync(150_000)
     await rejection
     expect(modelSignal.aborted).toBe(true)
-    expect(raw.close).toHaveBeenCalledWith({ runBeforeUnload: false })
-    expect(mocks.saveScreenshot).not.toHaveBeenCalled()
+    expect(raw.close).not.toHaveBeenCalled()
+    expect(mocks.saveScreenshot).toHaveBeenCalledWith(page, '/tmp/screens', 'demo-skill-step-1-failure')
     expect(log.append).toHaveBeenCalledWith(expect.objectContaining({
       step: 1,
       method: 'aiWaitFor',
@@ -447,18 +447,17 @@ describe('executeSteps', () => {
     }))
   })
 
-  it('preserves the visual timeout when synchronous page termination fails', async () => {
+  it('preserves the visual timeout when the failure screenshot fails', async () => {
     vi.useFakeTimers()
-    const { page, raw } = createPage()
-    const terminationError = new Error('page close threw synchronously')
+    const { page } = createPage()
+    const screenshotError = new Error('screenshot failed')
     const warning = vi.spyOn(logger, 'warn').mockImplementation(() => {})
-    raw.close.mockImplementation(() => {
-      throw terminationError
-    })
+    mocks.saveScreenshot.mockRejectedValue(screenshotError)
     mocks.aiWaitFor.mockImplementation(() => new Promise<void>(() => {}))
 
     const pending = executeSteps(context(page, [{ method: 'aiWaitFor', prompt: 'ready' }], {
       timeoutMs: 16_000,
+      screenshotDir: '/tmp/screens',
     }))
     const rejection = expect(pending).rejects.toMatchObject({
       name: 'TimeoutError',
@@ -470,10 +469,7 @@ describe('executeSteps', () => {
 
     await vi.advanceTimersByTimeAsync(1_000)
     await rejection
-    expect(warning).toHaveBeenCalledWith(
-      'Could not terminate timed-out operation "skill:demo-skill:step:1:aiWaitFor"',
-      terminationError,
-    )
+    expect(warning).toHaveBeenCalledWith('Could not capture failure screenshot', screenshotError)
   })
 
   it('waits for an externally cancelled visual wait to unwind before rejecting', async () => {

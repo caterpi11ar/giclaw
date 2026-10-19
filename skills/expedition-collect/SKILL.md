@@ -7,6 +7,7 @@ timeoutMs: 600000
 retries: 0
 dependsOn:
   - welkin-moon
+contexts: [ui, reward, navigation]
 ---
 
 ## Background

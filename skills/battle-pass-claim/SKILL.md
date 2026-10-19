@@ -7,6 +7,7 @@ timeoutMs: 300000
 retries: 0
 dependsOn:
   - welkin-moon
+contexts: [ui, reward]
 ---
 
 ## Background
@@ -47,6 +48,7 @@ dependsOn:
 - aiTap: 派蒙菜单图标网格中的「纪行」图标；必须确认文字或图标是纪行，不要点击旁边的多人游戏或其他入口
 - aiWaitFor: 纪行界面已打开
 - aiAct: 切换到纪行奖励页面；如果存在「一键领取」或亮起的可领取奖励，领取全部奖励；如果纪行未开启或没有可领取奖励，不做领取操作
+- screenshot: battle-pass-claimed
 - aiAct: 如果出现物品展示弹窗，点击空白处或确认按钮关闭
 - keyPress: Escape
 - aiWaitFor: 已回到游戏主界面，可以看到角色站在游戏世界中
