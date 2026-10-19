@@ -42,25 +42,7 @@ export class Gateway implements IGateway {
     this.skillRegistry = new SkillRegistry()
     this.stateStore = new StateStore(config.memory.dataDir, config.memory.maxHistory)
 
-    // Forward task runner events to gateway state
-    this.taskRunner.on('task:start', (data: { taskId: string }) => {
-      this.state.update({ currentTask: data.taskId })
-    })
-    this.taskRunner.on('task:complete', () => {
-      this.state.update({ currentTask: null, currentStep: 0, currentAction: null, currentReason: null })
-    })
-    this.taskRunner.on('task:index', (data: { taskIndex: number, taskTotal: number, taskId: string }) => {
-      this.state.update({ taskIndex: data.taskIndex, taskTotal: data.taskTotal })
-    })
-    this.taskRunner.on('quarantine', (error: QuarantinedError) => {
-      // A stopped attempt may still own browser/model work. Close admission in
-      // the same synchronous event turn so TaskQueue cannot dequeue a waiting
-      // run that would launch another browser before TaskRunner rejects it.
-      this.queue.close(error)
-      void this.scheduler?.stop().catch((stopError) => {
-        logger.warn('Could not stop scheduler after task runner quarantine', stopError)
-      })
-    })
+    this.attachRunnerEvents(this.taskRunner)
 
     // Keep queue depth in sync
     this.queue.on('enqueue', () => {
@@ -77,26 +59,74 @@ export class Gateway implements IGateway {
     })
   }
 
-  async init(): Promise<void> {
-    await this.skillRegistry.loadFromDirs(this.config.tasks.skillsDirs)
-    this.taskRunner.registerAll(this.skillRegistry.toTaskDefinitions())
-    if (this.skillRegistry.getAll().length === 0)
+  /** Forward task-runner events into gateway state. Reused by reloadSkills(). */
+  private attachRunnerEvents(runner: TaskRunner): void {
+    runner.on('task:start', (data: { taskId: string }) => {
+      this.state.update({ currentTask: data.taskId })
+    })
+    runner.on('task:complete', () => {
+      this.state.update({ currentTask: null, currentStep: 0, currentAction: null, currentReason: null })
+    })
+    runner.on('task:index', (data: { taskIndex: number, taskTotal: number, taskId: string }) => {
+      this.state.update({ taskIndex: data.taskIndex, taskTotal: data.taskTotal })
+    })
+    runner.on('quarantine', (error: QuarantinedError) => {
+      // A stopped attempt may still own browser/model work. Close admission in
+      // the same synchronous event turn so TaskQueue cannot dequeue a waiting
+      // run that would launch another browser before TaskRunner rejects it.
+      this.queue.close(error)
+      void this.scheduler?.stop().catch((stopError) => {
+        logger.warn('Could not stop scheduler after task runner quarantine', stopError)
+      })
+    })
+  }
+
+  private async loadSkillsInto(registry: SkillRegistry, runner: TaskRunner): Promise<void> {
+    await registry.loadFromDirs(this.config.tasks.skillsDirs)
+    runner.registerAll(registry.toTaskDefinitions())
+    if (registry.getAll().length === 0)
       throw new Error(`No skills found in: ${this.config.tasks.skillsDirs.join(', ')}`)
     // Resolve configured routines now so typos, missing dependencies and
     // dependency cycles fail during startup instead of during an unattended run.
-    this.taskRunner.getEnabledTasks(this.config.tasks.enabled)
+    runner.getEnabledTasks(this.config.tasks.enabled)
     for (const [name, taskIds] of Object.entries(this.config.tasks.routines)) {
       try {
-        this.taskRunner.getEnabledTasks(taskIds)
+        runner.getEnabledTasks(taskIds)
       }
       catch (err) {
         const message = err instanceof Error ? err.message : String(err)
         throw new Error(`Invalid routine "${name}": ${message}`)
       }
     }
+  }
+
+  async init(): Promise<void> {
+    await this.loadSkillsInto(this.skillRegistry, this.taskRunner)
     logger.info(
       `Loaded ${this.skillRegistry.getAll().length} skill(s) from ${this.config.tasks.skillsDirs.join(', ')}`,
     )
+  }
+
+  /**
+   * Re-read SKILL.md files from disk and rebuild the task runner.
+   *
+   * Used by the evolution loop after installing a candidate override so the
+   * next run executes the new steps rather than the definitions cached at
+   * startup. Must not be called while a run is in progress.
+   */
+  async reloadSkills(): Promise<void> {
+    const registry = new SkillRegistry()
+    const runner = new TaskRunner()
+    this.attachRunnerEvents(runner)
+    await this.loadSkillsInto(registry, runner)
+    this.skillRegistry = registry
+    this.taskRunner = runner
+    logger.info(`Reloaded ${registry.getAll().length} skill(s) from disk`)
+  }
+
+  /** The loaded definition for one skill (steps, source path, context). */
+  getSkillDefinition(id: string) {
+    return this.skillRegistry.get(id)
   }
 
   getSkillSummaries(): {
@@ -109,7 +139,7 @@ export class Gateway implements IGateway {
     dependsOn: string[]
     steps: number
   }[] {
-    return this.skillRegistry.getAll().map(s => ({
+    return this.skillRegistry.getAll().filter(s => !s.context).map(s => ({
       id: s.id,
       name: s.name,
       description: s.description,

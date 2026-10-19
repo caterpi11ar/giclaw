@@ -72,6 +72,7 @@ const mocks = vi.hoisted(() => {
     runSetupWizard: vi.fn(),
     wizardConfigured: vi.fn(),
     confirm: vi.fn(),
+    runEvolveCommand: vi.fn(),
     spinner,
     ora: vi.fn(() => ({
       start: vi.fn(() => spinner),
@@ -114,6 +115,7 @@ vi.mock('./extensions/feishu/src/client.js', () => ({
   sendAppMessage: mocks.sendAppMessage,
 }))
 vi.mock('./plugins/outbox.js', () => ({ NotificationOutbox: { open: mocks.outboxOpen } }))
+vi.mock('./evolve/command.js', () => ({ runEvolveCommand: mocks.runEvolveCommand }))
 
 interface TestConfig {
   model: { name: string, baseUrl: string, apiKey: string }
@@ -203,6 +205,7 @@ describe('cLI', () => {
     mocks.resolveFeishuAccount.mockReturnValue({ accountId: 'default', config: {} })
     mocks.createTenantTokenProvider.mockReturnValue({ getToken: vi.fn(async () => 't-1'), invalidate: vi.fn() })
     mocks.sendAppMessage.mockResolvedValue('om_1')
+    mocks.runEvolveCommand.mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -752,5 +755,23 @@ describe('cLI', () => {
     expect(mocks.logger.error).toHaveBeenCalledWith('Unknown outbox action "flush". Use list or clear.')
     expect(process.exitCode).toBe(1)
     expect(mocks.outbox.list).not.toHaveBeenCalled()
+  })
+})
+
+describe('cLI evolve dispatch', () => {
+  const originalArgv = process.argv
+
+  afterEach(() => {
+    process.argv = originalArgv
+  })
+
+  it('dispatches the evolve command with global and subcommand options', async () => {
+    mocks.runEvolveCommand.mockResolvedValue(undefined)
+    await runCli('evolve', '--skill', 'demo', '--dry-run')
+    await vi.waitFor(() => expect(mocks.runEvolveCommand).toHaveBeenCalled())
+
+    const [global, evolve] = mocks.runEvolveCommand.mock.calls[0]! as [Record<string, unknown>, Record<string, unknown>]
+    expect(evolve.skill).toBe('demo')
+    expect(global.dryRun === true || evolve.dryRun === true).toBe(true)
   })
 })

@@ -150,3 +150,86 @@ goal text
     await expect(loadSkills([join(root, 'missing'), root])).resolves.toEqual([])
   })
 })
+
+describe('context skills', () => {
+  afterEach(async () => {
+    await Promise.all(cleanupDirs.splice(0).map(path => rm(path, { recursive: true, force: true })))
+  })
+
+  it('merges context background and issues into runnable skills', async () => {
+    const root = await tempDir('giclaw-context-')
+    const ctxDir = join(root, 'ctx')
+    await mkdir(ctxDir, { recursive: true })
+    await writeFile(join(ctxDir, 'SKILL.md'), `---
+id: ctx
+name: Context
+description: context only
+enabled: false
+context: true
+---
+
+## Known Issues
+- shared issue
+`, 'utf-8')
+
+    const demoDir = join(root, 'demo')
+    await mkdir(demoDir, { recursive: true })
+    await writeFile(join(demoDir, 'SKILL.md'), `---
+id: demo
+name: Demo
+description: demo
+---
+
+## Background
+own bg
+
+## Steps
+- keyPress: Escape
+
+## Known Issues
+- own issue
+`, 'utf-8')
+
+    const skills = await loadSkills([root])
+    const demo = skills.find(skill => skill.id === 'demo')!
+    // The context skill has no Background, so the skill's own background is kept.
+    expect(demo.background).toBe('own bg')
+    expect(demo.knownIssues).toEqual(['shared issue', 'own issue'])
+    expect(demo.steps).toHaveLength(1)
+    expect(skills.find(skill => skill.id === 'ctx')?.context).toBe(true)
+  })
+
+  it('prepends context background ahead of the skill background', async () => {
+    const root = await tempDir('giclaw-context-bg-')
+    const ctxDir = join(root, 'ctx')
+    await mkdir(ctxDir, { recursive: true })
+    await writeFile(join(ctxDir, 'SKILL.md'), `---
+id: ctx
+name: Context
+description: context only
+context: true
+---
+
+## Background
+shared bg
+`, 'utf-8')
+
+    const demoDir = join(root, 'demo')
+    await mkdir(demoDir, { recursive: true })
+    await writeFile(join(demoDir, 'SKILL.md'), `---
+id: demo
+name: Demo
+description: demo
+---
+
+## Background
+own bg
+
+## Steps
+- keyPress: Escape
+`, 'utf-8')
+
+    const demo = (await loadSkills([root])).find(skill => skill.id === 'demo')!
+    expect(demo.background).toBe('shared bg\n\nown bg')
+  })
+})

@@ -4,14 +4,23 @@ import { basename, join, resolve } from 'node:path'
 import matter from 'gray-matter'
 import { z } from 'zod'
 import { ConfigError } from '../utils/errors.js'
+import { applyContextSkills } from './context.js'
+import { parseStepLine, splitSections } from './document.js'
 import { validateStepArgument } from './step-arguments.js'
 import { STEP_METHODS } from './types.js'
 
-const frontmatterSchema = z.object({
+export const frontmatterSchema = z.object({
   id: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'must use kebab-case'),
   name: z.string().min(1),
   description: z.string().min(1),
   enabled: z.boolean().default(true),
+  // Context skills contribute Background / Known Issues to every runnable skill
+  // and are never executed as tasks. See loadSkills().
+  context: z.boolean().default(false),
+  /** For context skills: which tags they belong to. Empty means `core`. */
+  tags: z.array(z.string().min(1).max(100)).max(50).default([]),
+  /** For runnable skills: which context tags to inject (plus `core`). */
+  contexts: z.array(z.string().min(1).max(100)).max(50).default([]),
   timeoutMs: z.number().int().positive().default(600_000),
   // Replaying a partially completed UI workflow is unsafe because the page is
   // no longer guaranteed to be at the skill's starting state.
@@ -29,14 +38,12 @@ function parseSteps(text: string, sourcePath: string): SkillStep[] {
     if (!line.startsWith('- '))
       continue
 
-    const content = line.slice(2)
-    const colonIdx = content.indexOf(':')
-    if (colonIdx === -1) {
+    const parsed = parseStepLine(line)
+    if (!parsed) {
       throw new ConfigError(`Invalid step in ${sourcePath}: "${line}" (expected "- method: argument")`)
     }
 
-    const method = content.slice(0, colonIdx).trim()
-    const prompt = content.slice(colonIdx + 1).trim()
+    const { method, prompt } = parsed
     if (!VALID_METHODS.has(method)) {
       throw new ConfigError(
         `Unknown step method "${method}" in ${sourcePath}. Valid methods: ${STEP_METHODS.join(', ')}`,
@@ -58,28 +65,20 @@ function parseSteps(text: string, sourcePath: string): SkillStep[] {
   return steps
 }
 
-function parseSkillBody(markdown: string, sourcePath: string): {
+export function parseSkillBody(
+  markdown: string,
+  sourcePath: string,
+  options: { allowEmptySteps?: boolean } = {},
+): {
   steps: SkillStep[]
   background?: string
   goal?: string
   knownIssues?: string[]
 } {
-  const sections = new Map<string, string>()
-  let currentHeading = ''
-
-  for (const line of markdown.split('\n')) {
-    const headingMatch = line.match(/^## (.+)/)
-    if (headingMatch) {
-      currentHeading = headingMatch[1]!.trim().toLowerCase()
-    }
-    else if (currentHeading) {
-      const existing = sections.get(currentHeading) ?? ''
-      sections.set(currentHeading, `${existing + line}\n`)
-    }
-  }
+  const sections = splitSections(markdown)
 
   const steps = parseSteps(sections.get('steps') ?? '', sourcePath)
-  if (steps.length === 0) {
+  if (steps.length === 0 && !options.allowEmptySteps) {
     throw new ConfigError(`Skill ${sourcePath} has no executable steps in its "## Steps" section`)
   }
 
@@ -141,7 +140,9 @@ export async function loadSkills(dirs: string[]): Promise<SkillDefinition[]> {
       if (frontmatter.dependsOn.includes(frontmatter.id)) {
         throw new ConfigError(`Skill "${frontmatter.id}" cannot depend on itself (${skillFile})`)
       }
-      const { steps, background, goal, knownIssues } = parseSkillBody(body, skillFile)
+      const { steps, background, goal, knownIssues } = parseSkillBody(body, skillFile, {
+        allowEmptySteps: frontmatter.context,
+      })
 
       skills.set(frontmatter.id, {
         ...frontmatter,
@@ -153,6 +154,8 @@ export async function loadSkills(dirs: string[]): Promise<SkillDefinition[]> {
       })
     }
   }
+
+  applyContextSkills([...skills.values()])
 
   return [...skills.values()]
 }

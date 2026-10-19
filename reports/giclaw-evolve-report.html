@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>giclaw · 自我迭代 Loop 进化系统 · 交付报告</title>
+<style>
+  :root {
+    --bg: #0b0e14; --panel: #141925; --panel2: #1b2233; --line: #263048;
+    --fg: #e6ebf5; --muted: #93a1bd; --accent: #7c9cff; --accent2: #5eead4;
+    --ok: #34d399; --warn: #fbbf24; --bad: #fb7185; --mutedb: #64748b;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: radial-gradient(1200px 600px at 80% -10%, #1a2540 0%, var(--bg) 55%) fixed;
+    color: var(--fg); font: 15px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 56px 24px 96px; }
+  header.hero { border-bottom: 1px solid var(--line); padding-bottom: 28px; margin-bottom: 36px; }
+  .eyebrow { color: var(--accent2); font: 600 12px/1 var(--mono); letter-spacing: .18em; text-transform: uppercase; }
+  h1 { font-size: 34px; line-height: 1.2; margin: 14px 0 10px; letter-spacing: -0.01em; }
+  h1 .sub { color: var(--muted); font-weight: 500; }
+  .lede { color: var(--muted); max-width: 760px; }
+  .meta { color: var(--muted); font: 12px/1.6 var(--mono); margin-top: 14px; }
+  h2 { font-size: 13px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); margin: 48px 0 16px; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .kpi { background: linear-gradient(180deg, var(--panel2), var(--panel)); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+  .kpi .v { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+  .kpi .l { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .pipe { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .step { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font: 600 12px/1 var(--mono); color: var(--fg); }
+  .step.gate { border-color: var(--warn); color: var(--warn); box-shadow: 0 0 0 1px #fbbf2433 inset; }
+  .arrow { color: var(--mutedb); font: 14px var(--mono); }
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; background: var(--panel2); }
+  tr:last-child td { border-bottom: none; }
+  code, .mono { font-family: var(--mono); font-size: .88em; }
+  code { background: #0e1320; border: 1px solid var(--line); padding: 1px 6px; border-radius: 6px; color: var(--accent2); }
+  .card { background: linear-gradient(180deg, var(--panel2), var(--panel)); border: 1px solid var(--line); border-radius: 16px; padding: 20px 22px; }
+  .gen { margin-bottom: 16px; }
+  .gen-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+  .gen-title { font-size: 17px; font-weight: 650; }
+  .muted { color: var(--muted); }
+  .badge { display: inline-block; font: 600 11px/1 var(--mono); padding: 6px 10px; border-radius: 999px; border: 1px solid; white-space: nowrap; }
+  .badge.ok { color: var(--ok); border-color: #34d39955; background: #34d39914; }
+  .badge.warn { color: var(--warn); border-color: #fbbf2455; background: #fbbf2414; }
+  .badge.bad { color: var(--bad); border-color: #fb718555; background: #fb718514; }
+  .badge.info { color: var(--accent); border-color: #7c9cff55; background: #7c9cff14; }
+  .badge.muted { color: var(--muted); border-color: var(--line); }
+  .diag { margin: 16px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 22px; }
+  .diag-row { display: flex; gap: 10px; align-items: baseline; }
+  .diag-row.wide { grid-column: 1 / -1; }
+  .diag-row .k { color: var(--muted); font-size: 12px; min-width: 64px; }
+  .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 22px; margin: 14px 0 0; }
+  .facts dt { color: var(--muted); font-size: 12px; }
+  .facts dd { margin: 2px 0 0; }
+  .diff-wrap { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
+  summary { cursor: pointer; color: var(--accent); font-size: 13px; }
+  pre.diff { margin: 12px 0 0; background: #0a0e18; border: 1px solid var(--line); border-radius: 10px; padding: 14px; overflow: auto; font: 12.5px/1.6 var(--mono); }
+  .dl { display: block; white-space: pre; }
+  .dl.add { color: #86efac; background: #34d39912; }
+  .dl.del { color: #fda4af; background: #fb718512; }
+  .dl.hunk { color: #93c5fd; }
+  .dl.meta { color: var(--muted); }
+  ul.check { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 22px; }
+  ul.check li { padding-left: 26px; position: relative; }
+  ul.check li::before { content: "✓"; position: absolute; left: 0; color: var(--ok); font-weight: 700; }
+  ul.safety { padding-left: 20px; color: var(--fg); }
+  ul.safety li { margin: 6px 0; }
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .diag, .facts, ul.check, .grid2 { grid-template-columns: 1fr; } h1 { font-size: 26px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="eyebrow">giclaw · self-iteration loop</div>
+    <h1>自我迭代 Loop 进化系统 <span class="sub">交付报告</span></h1>
+    <p class="lede">基于真实运行证据发现失败、产出对 SKILL.md 的最小补丁、在真实浏览器里重跑验证，成功则保留、失败则回滚。只改指令，不生成代码；默认需要人工确认才写入已提交目录。</p>
+    <div class="meta">generated 2026-10-14T08:53:01.958Z · repo /Users/daiqin/caterpi11ar/happy-coding/giclaw</div>
+  </header>
+
+  <section>
+    <div class="kpis">
+      <div class="kpi"><div class="v">2</div><div class="l">已记录 generation</div></div>
+      <div class="kpi"><div class="v">1</div><div class="l">产出有效提案</div></div>
+      <div class="kpi"><div class="v">0</div><div class="l">best-known-good</div></div>
+      <div class="kpi"><div class="v">0</div><div class="l">待人工确认</div></div>
+      <div class="kpi"><div class="v">102</div><div class="l">测试文件</div></div>
+      <div class="kpi"><div class="v">100% 行 · 99.93% 分支</div><div class="l">覆盖率门禁（实测）</div></div>
+    </div>
+  </section>
+
+  <h2>进化循环</h2>
+  <div class="pipe">
+    <span class="step">OBSERVE</span><span class="arrow">→</span><span class="step">DIAGNOSE</span><span class="arrow">→</span><span class="step">PROPOSE</span><span class="arrow">→</span><span class="step gate">VALIDATE</span><span class="arrow">→</span><span class="step">APPLY</span><span class="arrow">→</span><span class="step">RE-RUN</span><span class="arrow">→</span><span class="step">EVALUATE</span>
+  </div>
+  <p class="muted" style="margin-top:12px">VALIDATE 是硬门禁：不过 loader、过不了红线策略、diff 超限就不运行。EVALUATE 同时看成功与耗时——成功但明显变慢也算回归。</p>
+
+  <h2>模块</h2>
+  <table>
+    <thead><tr><th>模块</th><th>职责</th></tr></thead>
+    <tbody>
+      <tr><td><code>engine.ts</code></td><td>状态机 + 预算 + 回滚（依赖注入，可脱离浏览器/网络单测）</td></tr>
+      <tr><td><code>diagnose.ts</code> / <code>propose.ts</code></td><td>只读证据的结构化诊断 + 单点最小补丁提案</td></tr>
+      <tr><td><code>patch.ts</code> / <code>validate.ts</code> / <code>policy.ts</code></td><td>行级补丁、真实 loader 校验、红线策略</td></tr>
+      <tr><td><code>evidence.ts</code> / <code>store.ts</code></td><td>证据读取（transcript/截图/summary）与私有 workspace 持久化</td></tr>
+      <tr><td><code>model-client.ts</code></td><td>OpenAI 兼容纯文本调用（超时 + 有界错误）</td></tr>
+      <tr><td><code>command.ts</code></td><td><code>giclaw evolve</code> 入口 + status/show/accept/reject/apply</td></tr>
+    </tbody>
+  </table>
+  <p class="muted" style="margin-top:10px">budget.ts · command.ts · diagnose.ts · diff.ts · engine.ts · evidence.ts · index.ts · json.ts · model-client.ts · patch.ts · policy.ts · propose.ts · store.ts · types.ts · validate.ts · 共 2125 行源码</p>
+
+  <h2>真实运行证据</h2>
+  
+  <article class="card gen">
+    <header class="gen-head">
+      <div>
+        <div class="gen-title">claim-achievements <span class="mono">claim-achievements-20261014T084945293Z-ab32deb1</span></div>
+        <div class="muted">2026-10-14T08:49:45.293Z → 2026-10-14T08:49:45.293Z</div>
+      </div>
+      <span class="badge info">已提案</span>
+    </header>
+    
+    <div class="diag">
+      <div class="diag-row"><span class="k">失败步骤</span><span>6 · <code>aiAct</code></span></div>
+      <div class="diag-row"><span class="k">置信度</span><span>91%</span></div>
+      <div class="diag-row"><span class="k">修复类型</span><span><code>edit-step-prompt</code></span></div>
+      <div class="diag-row wide"><span class="k">根因</span><span>步骤 6 已开始但没有执行完成，最终触发 300000ms 全局超时。更可能的根因是步骤 5 将“遍历所有带红点分类、领取全部奖励并反复确认红点消失”集中在单个 aiAct 中，操作范围不受限且界面领取后会滚动或重排，消耗了大部分任务时间；步骤 6 在剩余时间不足时又以开放式条件查找奖励展示弹窗，未能在截止前返回。</span></div>
+      <div class="diag-row wide"><span class="k">依据</span><span class="muted">最近一次 claim-achievements 运行中，步骤 1 至 5 均有 executed 记录，而步骤 6 只有 started，没有 executed，故直接失败点为步骤 6。运行摘要明确为整体 300000ms 超时而非断言或点击错误。步骤 5 的单次 aiAct 包含跨分类循环、重复领取和终止条件判断，是最可能耗尽全局时间预算的步骤。</span></div>
+    </div>
+    <dl class="facts"><div><dt>基线</dt><dd>失败 · 302026ms · Operation &quot;task:claim-achievements&quot; timed out after 300000ms</dd></div><div><dt>候选</dt><dd>—</dd></div><div><dt>校验</dt><dd>通过</dd></div><div><dt>补丁</dt><dd>edit-step-prompt · 改动 2 行</dd></div></dl>
+    <details class="diff-wrap"><summary>查看候选 diff</summary><pre class="diff"><span class="dl meta">--- /Users/daiqin/caterpi11ar/happy-coding/giclaw/skills/claim-achievements/SKILL.md	2026-09-14 16:00:06</span>
+<span class="dl meta">+++ /Users/daiqin/.giclaw/evolve/generations/claim-achievements-20261014T084945293Z-ab32deb1/candidate/SKILL.md	2026-10-14 16:50:15</span>
+<span class="dl hunk">@@ -23,7 +23,7 @@</span>
+<span class="dl "> - aiWaitFor: 派蒙菜单已打开，鼠标已解锁</span>
+<span class="dl "> - aiTap: 派蒙菜单中的「成就」入口；避开屏幕最左侧的云游戏平台侧边栏</span>
+<span class="dl "> - aiWaitFor: 成就分类界面已打开</span>
+<span class="dl del">-- aiAct: 逐个打开带红点的成就分类并点击所有「领取」按钮；重复处理直到所有可见分类都不再有红点。如果没有红点或没有可领取奖励，不做领取操作</span>
+<span class="dl add">+- aiAct: 按界面当前顺序仅遍历一轮带红点的成就分类：进入每个带红点分类后领取其中当前可见的所有「领取」按钮，列表滚动或重排后继续检查该分类，直到不再有「领取」按钮便立即返回分类界面并处理下一个红点分类；不要重复进入已处理分类，也不要遍历无红点分类。领取时若出现奖励展示弹窗，立即点击空白处或确认按钮关闭后继续</span>
+<span class="dl "> - aiAct: 如果出现奖励展示弹窗，点击空白处或确认按钮关闭</span>
+<span class="dl "> - keyPress: Escape</span>
+<span class="dl "> - aiAct: 持续按 Escape 或点击关闭，直到回到游戏主界面</span>
+<span class="dl ">&nbsp;</span></pre></details>
+  </article>
+  <article class="card gen">
+    <header class="gen-head">
+      <div>
+        <div class="gen-title">claim-achievements <span class="mono">claim-achievements-20261010T103559897Z-cbf0629c</span></div>
+        <div class="muted">2026-10-10T10:35:59.897Z → 2026-10-10T10:35:59.897Z</div>
+      </div>
+      <span class="badge muted">无安全修复</span>
+    </header>
+    
+    <div class="diag">
+      <div class="diag-row"><span class="k">失败步骤</span><span>6 · <code>aiAct</code></span></div>
+      <div class="diag-row"><span class="k">置信度</span><span>93%</span></div>
+      <div class="diag-row"><span class="k">修复类型</span><span><code>no-safe-fix</code></span></div>
+      <div class="diag-row wide"><span class="k">根因</span><span>步骤 6 已开始但没有执行完成，随后触发 300000ms 全局超时。最可能是步骤 5 的单次 aiAct 包含“逐个打开、领取全部、重复直到无红点”的无界循环式任务，消耗了绝大部分执行预算，导致步骤 6 在处理奖励展示弹窗时已无足够剩余时间；也可能是奖励弹窗状态持续变化，使该 aiAct 未能收敛。</span></div>
+      <div class="diag-row wide"><span class="k">依据</span><span class="muted">记录中步骤 1 至 5 均为 executed，最后一条是 step=6 result=started，缺少对应的 executed，且摘要明确为全局超时。该技能会领取原石奖励，领取行为不可逆；依据红线不能提出绕过或具体修复方案。</span></div>
+    </div>
+    <dl class="facts"><div><dt>基线</dt><dd>失败 · 302026ms · Operation &quot;task:claim-achievements&quot; timed out after 300000ms</dd></div><div><dt>候选</dt><dd>—</dd></div><div><dt>校验</dt><dd>—</dd></div><div><dt>补丁</dt><dd>—</dd></div></dl>
+    
+  </article>
+
+  <h2>验证</h2>
+  <ul class="check">
+    <li>lint:check 通过</li>
+    <li>typecheck 通过</li>
+    <li>test:coverage：全局 ≥99.8% + 每文件 ≥98%</li>
+    <li>vitest --shuffle（顺序无关）</li>
+    <li>pnpm build 通过</li>
+    <li>test:package 通过</li>
+    <li>敏感信息扫描通过</li>
+    <li>docs typecheck + build 通过</li>
+  </ul>
+
+  <h2>安全边界</h2>
+  <ul class="safety">
+    <li>只允许编辑 SKILL.md（frontmatter + 正文），<b>不生成、不执行任意代码</b>。</li>
+    <li>补丁是封闭集合：insert-step / edit-step-prompt / reorder-step / add-known-issue / adjust-timeout。</li>
+    <li>候选先过真实 loader 校验 + 红线策略（禁购买、消耗原石、不可逆动作）+ 行数上限，才允许进入浏览器。</li>
+    <li>一次只进化一个技能，复用串行 FIFO 队列；重跑前重建技能定义。</li>
+    <li>任何非接受结局都会把 <code>~/.giclaw/skills/&lt;id&gt;/SKILL.md</code> 恢复到会话前状态；已提交目录在 <code>--apply</code> 前不被改写。</li>
+  </ul>
+
+  <footer>
+    由 giclaw 自动生成 · 数据源 <code>~/.giclaw/evolve/generations/*/record.json</code> 与 <code>coverage/coverage-summary.json</code>
+  </footer>
+</div>
+</body>
+</html>
