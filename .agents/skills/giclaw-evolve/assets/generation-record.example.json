@@ -1,0 +1,53 @@
+{
+  "genId": "expedition-collect-20260807T120000Z-1",
+  "skillId": "expedition-collect",
+  "parentGenId": null,
+  "startedAt": "2026-08-07T12:00:00.000Z",
+  "completedAt": "2026-08-07T12:06:11.000Z",
+  "status": "accepted",
+  "trigger": "manual",
+  "model": {
+    "name": "doubao-seed-1-6-flash",
+    "baseUrl": "https://ark.example.com/v3"
+  },
+  "baseline": {
+    "runId": "3f1c2b7a-9d4e-4c8a-9f21-0a1b2c3d4e5f",
+    "success": false,
+    "failedStep": 24,
+    "message": "Step 24/35 (aiWaitFor) failed: aiWaitFor timed out after 165000ms",
+    "durationMs": 421000
+  },
+  "diagnosis": {
+    "failedStep": 24,
+    "method": "aiWaitFor",
+    "rootCauseHypothesis": "区域切换到稻妻后地图瓦片加载慢于 aiWaitFor 的检查节拍，缺少显式等待导致下一步坐标点击落在旧地图上",
+    "confidence": 0.62,
+    "suggestedFixKind": "insert-wait-before-step",
+    "reasoning": "transcript 显示 step 22(aiAct select 稻妻) executed，step 24 立即等待锚点详情；失败截图仍是蒙德地图。"
+  },
+  "patch": {
+    "kind": "insert-step",
+    "touchedLines": { "from": 118, "to": 121 },
+    "diff": "--- a/skills/expedition-collect/SKILL.md\n+++ b/skills/expedition-collect/SKILL.md\n@@ -118,6 +118,8 @@\n - aiWaitFor: 世界地图显示稻妻区域，并且能看到稻妻城的普通传送锚点\n+- wait: 1s\n+- aiWaitFor: 稻妻城地图瓦片已经完全加载，可以清楚辨认街道与锚点图标\n - click: 681,432\n",
+    "sha256Before": "9b1f6c2e0a4d5e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f",
+    "sha256After": "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b"
+  },
+  "validation": {
+    "loaderOk": true,
+    "policyOk": true,
+    "violations": []
+  },
+  "candidate": {
+    "runId": "7c8d9e0f-1a2b-3c4d-5e6f-7a8b9c0d1e2f",
+    "success": true,
+    "failedStep": null,
+    "message": "All steps completed",
+    "durationMs": 338000
+  },
+  "artifacts": {
+    "candidateSkill": "candidate/SKILL.md",
+    "baselineTranscript": "evidence/baseline.jsonl",
+    "baselineScreenshot": "evidence/baseline-failure.png",
+    "candidateTranscript": "evidence/candidate.jsonl"
+  }
+}
