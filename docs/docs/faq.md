@@ -19,7 +19,7 @@ title: 常见问题
 giclaw run --no-headless
 ```
 
-程序最多用 15 秒检查 Cookie 恢复状态。确认无效后会删除失效文件，自动打开可见浏览器等待你重新登录；登录成功后 Cookie 自动更新。
+程序最多用 60 秒检查 Cookie 恢复状态。即使恢复失败也不会删除 Cookie，而是自动打开可见浏览器等待你重新登录；登录成功后 Cookie 自动更新。
 
 ## Chromium 下载失败
 
@@ -60,7 +60,7 @@ giclaw 优先使用 Playwright 已安装的 Chromium；对应版本不存在时�
 
 **Q: 默认无头模式下如何登录？**
 
-无头浏览器本身无法接受人工登录。程序发现没有 Cookie，或最多检查 15 秒后确认 Cookie 失效时，会关闭无头会话并自动打开可见浏览器。登录完成后保存新 Cookie；如果配置仍是 `headless: true`，程序会重新切回无头会话继续运行。
+无头浏览器本身无法接受人工登录。程序发现没有 Cookie，或最多检查 60 秒后仍未恢复时，会关闭无头会话并自动打开可见浏览器。登录完成后保存新 Cookie；如果配置仍是 `headless: true`，程序会重新切回无头会话继续运行。
 
 使用 `--no-headless` 可以让登录后的整个任务过程保持可见，适合首次验收和 UI 变更后的回归。
 
@@ -132,3 +132,19 @@ giclaw run --tasks claim-mail --no-headless
 - 或在 `config.json` 中设置 `"logLevel": "debug"`
 - 每次运行的详细记录（transcript）保存在 `~/.giclaw/data/transcripts/` 目录
 - 执行截图保存在 `~/.giclaw/data/screenshots/` 目录
+
+## 会话与截图
+
+**Q: 每次运行都要重新登录？**
+
+不会。登录成功后会保存 Cookie 到 `~/.giclaw/cookies.json`，后续运行优先复用。恢复最多检查 60 秒；即使恢复失败也不会删除 Cookie，而是回退到可见浏览器人工登录，成功后覆盖。
+
+**Q: 任务成功 / 失败有截图吗？**
+
+有。内置奖励技能在领取动作后有一个 `screenshot` 检查点，成功运行会在 `~/.giclaw/data/screenshots/` 留下效果图；步骤失败（包括视觉等待超时）也会先保存失败现场，再由任务清理关闭页面。
+
+## 自我迭代
+
+**Q: `giclaw evolve` 会自动修改我的技能吗？**
+
+只会修改 `SKILL.md`，且默认需要人工确认：候选通过后停在待确认状态，`--accept` 才接受，`--accept --apply` 才写入已提交目录。失败或回归会自动回滚到会话前状态。它不会生成或执行任意代码。

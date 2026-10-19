@@ -24,6 +24,7 @@ giclaw daemon --no-web
 - **TUI**：TTY 环境自动渲染 ink 仪表盘
 - **非 TTY**：回退到纯日志输出
 - **Web 面板**：默认启用，仅监听 `127.0.0.1:3000`；页面会取得进程级 HttpOnly 同源会话 Cookie，API 与 WebSocket 同时校验 Host、Origin 和会话
+- **进化只读 API**：`GET /api/evolve`（best-known-good / 待确认 / 最近 generation）与 `GET /api/evolve/:genId`（单条记录）
 
 如果定时任务只需要月卡和邮件，将 `tasks.enabled` 调整为 `daily` 中的两个任务。`rewards` 与 `full` 默认都只包含 5 个已验收奖励任务，暂停的探索派遣不会被调度。
 

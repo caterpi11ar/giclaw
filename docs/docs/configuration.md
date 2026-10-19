@@ -120,6 +120,20 @@ title: 配置
 - `rewards`：月卡、邮件、成就、活动和纪行；与默认启用集合一致，是完整奖励流程。
 - `full`：当前与 `rewards` 一致，只包含 5 个已验收奖励任务。暂停的探索派遣不会由默认流程调用。
 
+### 进化（evolve）
+
+| 配置项 | 说明 | 默认值 |
+|--------|------|--------|
+| `evolve.enabled` | 是否允许自动触发（显式 `giclaw evolve` 不受限） | `false` |
+| `evolve.maxGenerations` | 单次进化的最大代数 | `3` |
+| `evolve.maxWallClockMs` | 单次进化的墙钟上限 | `1800000`（30 分钟） |
+| `evolve.maxModelCalls` | 单次进化的模型调用上限 | `10` |
+| `evolve.regressionFactor` | 候选成功但耗时超过基线 × 该系数即视为回归 | `1.5` |
+| `evolve.requireApproval` | 通过后是否等待人工确认才接受 | `true` |
+| `evolve.maxPatchLines` | 单次补丁的最大改动行数 | `40` |
+| `evolve.modelTimeoutMs` | 诊断/提案单次模型调用超时 | `120000` |
+| `evolve.allowedSkills` | 允许进化的技能；空表示全部 | `[]` |
+
 ### 调度
 
 | 配置项 | 说明 | 默认值 |
@@ -145,6 +159,8 @@ title: 配置
 | `login.successSelector` | 登录成功后检测的 CSS 选择器 | `".wel-card__content--start"` |
 | `login.timeoutMs` | 等待手动登录的超时时间（毫秒） | `300000`（5 分钟） |
 | `login.pollIntervalMs` | 检测登录状态的轮询间隔（毫秒） | `500` |
+
+保存的 Cookie 会先用最多 60 秒尝试恢复；恢复失败**不会删除** Cookie，而是回退到可见浏览器人工登录，成功后覆盖。
 
 ### 启动游戏
 

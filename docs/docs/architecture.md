@@ -57,7 +57,8 @@ EvolveStore 安装候选覆盖 ──► Gateway.reloadSkills() ──► 真实
 
 ## 关键语义
 
-- `Background`、`Goal`、`Known Issues` 被注入 `aiActionContext`，为每个 AI 步骤提供共享约束。其中 `context: true` 的**上下文技能**（原神 UI 约定、云游戏页面、奖励语义、安全红线）的 `Background` 与 `Known Issues` 会先合并进每个可运行技能；上下文技能不执行、也不需要 Steps。
+- `Background`、`Goal`、`Known Issues` 被注入 `aiActionContext`，为每个 AI 步骤提供共享约束。`context: true` 的**上下文技能**按 `tags` 注入：可运行技能用 `contexts` 选择标签，`core` 始终注入；上下文技能不执行、也不需要 Steps。格式解析集中在 `src/skills/document.ts`，标签合并集中在 `src/skills/context.ts`。
+- 步骤失败（含超时）会先尝试保存失败截图，再由 TaskRunner 关闭页面；内置奖励技能在领取动作后还有一个 `screenshot` 检查点，成功运行会留下效果图。
 - `enabled` 是技能目录的推荐状态；真正的执行集合由 `tasks.enabled`、`--tasks` 或 `--routine` 决定。
 - `dependsOn` 会自动加入前置技能。例如运行 `claim-mail` 会先运行 `welkin-moon`。
 - 同一 ID 出现在多个 `skillsDirs` 时，后面的目录覆盖前面的目录，允许用户定制内置技能。

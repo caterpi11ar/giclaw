@@ -16,6 +16,7 @@ giclaw [options] [command]
 | `run` | 单次运行（默认） |
 | `skills` | 校验并列出技能、依赖、命名流程和原子操作 |
 | `daemon [options]` | Daemon 模式 |
+| `evolve [options]` | 自我迭代：诊断失败技能、生成最小 `SKILL.md` 补丁、真实重跑、接受或回滚 |
 | `init [options]` | 交互式初始化配置 |
 | `config` | 显示配置路径 |
 | `plugins` | 列出已发现的插件、加载状态、频道 / 服务 / 路由 / 工具与启用方式 |
@@ -59,6 +60,21 @@ giclaw [options] [command]
 | `giclaw outbox clear` | 丢弃整个队列，不再重投 |
 
 队列保存在 `~/.giclaw/data/notification-outbox.json`（`0600`），最多保留 200 条 / 每条最多重试 5 次 / 超过 7 天自动过期。丢弃（`clear`）是运维明确放弃的动作，没有单独的 `flush`——重投只发生在 Daemon 启动时。
+
+## Evolve 选项
+
+| 选项 | 说明 |
+|------|------|
+| `--skill <id>` | 要进化 / 接受 / 回滚的技能 |
+| `--status` | 查看 best-known-good、待确认候选与最近 generation |
+| `--show <genId>` | 打印一条 generation 记录（JSON） |
+| `--accept` / `--reject` | 接受 / 回滚 `--skill` 的待确认候选 |
+| `--apply` | 与 `--accept` 连用，把候选写入已提交目录（默认 `./skills`） |
+| `--target-dir <dir>` | 指定 `--apply` 目标目录 |
+| `--max-generations <n>` | 覆盖 `evolve.maxGenerations` |
+| `--max-minutes <n>` | 覆盖 `evolve.maxWallClockMs` |
+| `--no-require-approval` | 通过后自动接受（仍需 `--apply` 才写仓库） |
+| `--dry-run` | 只诊断 + 提案 + 校验，不启动浏览器 |
 
 ## Daemon 选项
 
@@ -118,6 +134,17 @@ giclaw skills
 
 # 验证配置
 giclaw run --dry-run
+
+# 只诊断 + 提案 + 校验（不启动浏览器）
+giclaw evolve --skill claim-achievements --dry-run
+
+# 完整进化（默认需人工确认）
+giclaw evolve --skill claim-achievements
+
+# 查看状态 / 接受 / 回滚
+giclaw evolve --status
+giclaw evolve --skill claim-achievements --accept --apply
+giclaw evolve --skill claim-achievements --reject
 
 # 启动 daemon 模式
 giclaw daemon
