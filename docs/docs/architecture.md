@@ -33,9 +33,31 @@ StepExecutor
 
 项目不是一个自由循环直到模型返回 `done` 的通用 Agent。它执行 `SKILL.md` 中有界、可审计的 `## Steps` 工作流；其中 `aiAct` 可以在单个步骤内部让 Midscene 规划多个动作。
 
+## 自我迭代回路
+
+`giclaw evolve` 在同一个执行链之上叠加一层有界的进化回路：
+
+```text
+Gateway.getRunHistory ──► 证据（transcript / 截图 / run summary）
+        │
+        ▼
+模型（纯文本）──► 结构化诊断 ──► 结构化补丁
+        │
+        ▼
+validateSkillCandidate（复用 loader schema + 红线策略 + 行数上限）
+        │
+        ▼
+EvolveStore 安装候选覆盖 ──► Gateway.reloadSkills() ──► 真实重跑
+        │
+        ▼
+接受（待确认 / --apply）或回滚到会话前状态
+```
+
+进化只修改 `SKILL.md`，不生成或执行代码；候选重跑前必须 `reloadSkills()`，否则会继续使用启动时缓存的旧步骤定义。
+
 ## 关键语义
 
-- `Background`、`Goal`、`Known Issues` 被注入 `aiActionContext`，为每个 AI 步骤提供共享约束。
+- `Background`、`Goal`、`Known Issues` 被注入 `aiActionContext`，为每个 AI 步骤提供共享约束。其中 `context: true` 的**上下文技能**（原神 UI 约定、云游戏页面、奖励语义、安全红线）的 `Background` 与 `Known Issues` 会先合并进每个可运行技能；上下文技能不执行、也不需要 Steps。
 - `enabled` 是技能目录的推荐状态；真正的执行集合由 `tasks.enabled`、`--tasks` 或 `--routine` 决定。
 - `dependsOn` 会自动加入前置技能。例如运行 `claim-mail` 会先运行 `welkin-moon`。
 - 同一 ID 出现在多个 `skillsDirs` 时，后面的目录覆盖前面的目录，允许用户定制内置技能。

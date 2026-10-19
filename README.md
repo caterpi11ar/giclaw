@@ -21,7 +21,7 @@
 - **视觉 + 确定性操作** — 视觉 AI 处理变化界面，固定键鼠步骤处理稳定入口
 - **文件驱动技能** — 写一个 Markdown 就能定义新任务，无需 TypeScript
 - **多模型支持** — Gemini、OpenAI、豆包、通义千问，任意 OpenAI 兼容视觉 API
-- **共享游戏上下文** — 通用 UI 规则（鼠标锁定、HUD 布局、云游戏侧边栏）自动注入，技能只需关注自身逻辑
+- **共享游戏上下文** — 通用 UI 规则（鼠标锁定、HUD 布局、云游戏侧边栏、奖励语义、安全红线）以 `context: true` 的上下文技能集中维护，自动注入每个可运行技能，技能只需关注自身逻辑
 - **Daemon 模式** — cron 定时调度 + TUI 仪表盘 + Web 面板
 - **一条龙编排** — 技能依赖自动展开，支持 `daily` / `rewards` / `full` 命名流程
 - **混合原子操作** — 视觉 AI 定位 + 确定性键鼠回放，共 22 种技能原子操作
@@ -67,6 +67,19 @@ giclaw run --routine rewards  # 显式运行完整奖励流程
 `daily` 只运行月卡和邮件；`rewards` 与 `full` 都只包含 5 个已验收奖励任务。暂停的 `expedition-collect` 不会被任何默认流程调用。
 
 自定义技能只需在 `~/.giclaw/skills/` 下创建 `SKILL.md`，详见 [编写技能](https://giclaw.cn/docs/skills/writing-skills)。
+
+## 自我迭代与进化
+
+`giclaw evolve` 让 giclaw 从真实运行证据出发，自动诊断失败技能、生成对 `SKILL.md` 的**一处**最小补丁、在真实浏览器里重跑验证，成功则保留、失败则回滚。
+
+```bash
+giclaw evolve --skill claim-achievements --dry-run   # 只诊断/提案/校验，不启动浏览器
+giclaw evolve --skill claim-achievements             # 完整迭代（默认需人工确认）
+giclaw evolve --status                               # best-known-good / 待确认 / 最近代数
+giclaw evolve --skill claim-achievements --accept --apply
+```
+
+只修改 `SKILL.md`，不生成或执行代码；候选必须先通过严格 loader 校验与红线策略（禁止购买、消耗原石/付费货币）才会运行；默认需要人工确认才写入已提交目录。详见[文档](https://giclaw.cn/docs/evolution)。
 
 ## 通知与集成
 

@@ -16,6 +16,7 @@ const sidebars: SidebarsConfig = {
       ],
     },
     'roadmap',
+    'evolution',
     {
       type: 'category',
       label: '技能系统',
@@ -23,6 +24,7 @@ const sidebars: SidebarsConfig = {
         'skills/overview',
         'skills/writing-skills',
         'skills/built-in-skills',
+        'skills/context-skills',
       ],
     },
     'changelog',
