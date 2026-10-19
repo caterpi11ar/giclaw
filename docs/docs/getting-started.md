@@ -53,7 +53,7 @@ giclaw run --no-headless
 giclaw run
 ```
 
-后续运行会自动复用已保存的 Cookie。Cookie 恢复最多检查 15 秒；确认无效后，程序会删除失效文件并自动打开可见浏览器，等待你重新登录。登录成功后会更新 Cookie，并按配置继续使用可见或 headless 会话。
+后续运行会自动复用已保存的 Cookie。Cookie 恢复最多检查 60 秒；恢复失败时**不会删除** Cookie，而是回退到可见浏览器等待你重新登录，登录成功后覆盖并按配置继续使用可见或 headless 会话。
 
 ## 验证配置
 
@@ -72,6 +72,19 @@ giclaw run --routine rewards
 ```
 
 不指定参数的 `giclaw run`、`rewards` 与 `full` 都会运行 5 个已验收任务；`daily` 只运行月卡和邮件。暂停的探索派遣能力已从全部默认命名流程移除。
+
+## 自我迭代（可选）
+
+技能失败时，可以让 giclaw 基于真实运行证据自己提出最小修复，并在真实浏览器里验证：
+
+```bash
+giclaw evolve --skill claim-achievements --dry-run   # 只诊断/提案/校验
+giclaw evolve --skill claim-achievements             # 完整迭代（默认需人工确认）
+giclaw evolve --status                               # 查看待确认与历史
+giclaw evolve --skill claim-achievements --reject    # 回滚
+```
+
+只修改 `SKILL.md`，不生成代码；候选先过严格校验与红线策略，失败会回滚。详见[自我迭代与进化](./evolution)。
 
 ## 从源码安装（开发）
 
